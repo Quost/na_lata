@@ -1,0 +1,25 @@
+name: Nova task da turma
+description: Proponha uma funcionalidade, melhoria ou componente.
+title: "[Proposta] "
+labels: ["aula"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qual problema queremos resolver?
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Comportamento esperado e critérios de aceite
+      description: Descreva a entrega de código e combine a prioridade com a turma.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Como vamos testar?
+      description: Inclua caminho feliz, erro/vazio e testes automatizados relevantes.
+    validations:
+      required: true

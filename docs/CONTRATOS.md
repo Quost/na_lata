@@ -47,3 +47,7 @@ T03 e T04 consultam `scope.products.byBarcode`, depois `scope.openFoodFacts.look
 OFF: `https://world.openfoodfacts.org/api/v2/product/{barcode}.json`. Pedir somente campos necessários; identificar o app com User-Agent, usar timeout e tratar 429 sem loop de retry. Produto com status=0 retorna null. JSON inválido, timeout e HTTP de erro devem ser diferenciados de “não encontrado”.
 
 Referência: https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/
+
+## Acesso padronizado aos serviços
+
+Todas as chamadas passam pelos clientes compartilhados. Leia [o guia de clientes](CLIENTES.md) antes de implementar as consultas. Repositórios Supabase recebem BackendClient; chamadas usam client.request e a identidade vem de client.requireUserId.

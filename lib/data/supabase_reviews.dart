@@ -1,10 +1,10 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'clients/backend_client.dart';
 import '../core/contracts.dart';
 import '../core/models.dart';
 
 class SupabaseReviews implements ReviewRepository {
   SupabaseReviews(this.client);
-  final SupabaseClient client;
+  final BackendClient client;
   @override
   Future<List<Review>> forProduct(String barcode) async =>
       throw const FeaturePending('T08 — consultar avaliações');

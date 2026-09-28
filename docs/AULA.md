@@ -51,3 +51,9 @@ Acompanhar no GitHub: sem responsável = disponível, responsável = em andament
 - Às 21h20, demonstrar último main verde, sem fazer merge de código quebrado para “terminar”.
 
 Fechar com: onde houve conflito, qual contrato ajudou, o que a revisão encontrou e o que fariam diferente no projeto final.
+
+## Autonomia e qualidade
+
+Os alunos são livres para criar novas tasks: proponham funcionalidades, melhorias e correções com critérios de aceite e combinem a prioridade com a turma. Todos devem programar e se preocupar com testes das funcionalidades: validar sucesso, erro e estado vazio; automatizar regras de negócio e interações relevantes; registrar evidências no PR.
+
+Use o [design system](DESIGN_SYSTEM.md) para manter consistência visual.

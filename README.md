@@ -45,3 +45,13 @@ flutter test
 O catálogo externo vem do [Open Food Facts](https://world.openfoodfacts.org/). O banco local deste template é fictício e não foi extraído do serviço. Ao importar produtos reais, manter atribuição ao Open Food Facts (dados sob ODbL; imagens sob licença indicada pelo provedor).
 
 **Corte de integração: 21h20.** Entregar um fluxo funcionando vale mais que muitas telas desconectadas.
+
+## Autonomia e qualidade
+
+Os alunos são livres para criar novas tasks: proponham funcionalidades, melhorias e correções com critérios de aceite e combinem a prioridade com a turma. Todos devem programar e se preocupar com testes das funcionalidades: validar sucesso, erro e estado vazio; automatizar regras de negócio e interações relevantes; registrar evidências no PR.
+
+Use o [design system](docs/DESIGN_SYSTEM.md) para manter consistência visual.
+
+## Acesso padronizado aos serviços
+
+Todas as chamadas passam pelos clientes compartilhados. Leia [o guia de clientes](docs/CLIENTES.md) antes de implementar as consultas. Repositórios Supabase recebem BackendClient; chamadas usam client.request e a identidade vem de client.requireUserId.

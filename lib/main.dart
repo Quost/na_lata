@@ -7,6 +7,7 @@ import 'data/open_food_facts_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
+import 'data/clients/backend_client.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +17,7 @@ Future<void> main() async {
       throw StateError('APP_MODE deve ser demo ou supabase.');
     }
     final demo = mode == 'demo';
-    SupabaseClient? client;
+    BackendClient? client;
     if (!demo) {
       const url = String.fromEnvironment('SUPABASE_URL');
       const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
@@ -25,10 +26,15 @@ Future<void> main() async {
           'Configure URL e chave pública em config/classroom.json.',
         );
       }
-      await Supabase.initialize(url: url, publishableKey: key);
-      client = Supabase.instance.client;
-      if (client.auth.currentSession == null) {
-        await client.auth.signInAnonymously();
+      await Supabase.initialize(
+        url: url,
+        publishableKey: key,
+        postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+      );
+      final sdk = Supabase.instance.client;
+      client = BackendClient(sdk);
+      if (sdk.auth.currentSession == null) {
+        await client.request((db) => db.auth.signInAnonymously());
       }
     }
     runApp(
@@ -39,7 +45,7 @@ Future<void> main() async {
           community: demo ? DemoCommunity() : SupabaseCommunity(client!),
           openFoodFacts: HttpOpenFoodFactsRepository(),
           isDemo: demo,
-          userId: demo ? 'demo-user' : client!.auth.currentUser!.id,
+          userId: demo ? 'demo-user' : client!.requireUserId,
         ),
       ),
     );

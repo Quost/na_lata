@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'core/app_scope.dart';
 import 'core/models.dart';
 import 'feature_registry.dart';
+import 'design_system/na_lata_ui.dart';
 
 class NaLataApp extends StatelessWidget {
   const NaLataApp({super.key, required this.scope});
@@ -10,11 +11,7 @@ class NaLataApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'Na Lata',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF176B4D)),
-      scaffoldBackgroundColor: const Color(0xFFF7F6F1),
-    ),
+    theme: NaTheme.light,
     home: HomePage(scope: scope),
   );
 }
@@ -45,6 +42,15 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Na Lata'),
         actions: [
+          IconButton(
+            tooltip: 'Design system',
+            icon: const Icon(Icons.palette_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const DesignSystemGallery(),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Chip(
@@ -56,7 +62,7 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: NaSpace.page,
         children: [
           Text(
             'Comprou. Provou. Falou.',
@@ -82,27 +88,22 @@ class _HomePageState extends State<HomePage> {
                   );
                 }
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const NaLoading();
                 }
                 if (snapshot.data!.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('Nenhum produto encontrado.'),
+                  return const NaEmpty(
+                    title: 'Nenhum produto encontrado',
+                    message: 'Tente outro nome ou limpe os filtros.',
                   );
                 }
                 return Column(
                   children: snapshot.data!
                       .map(
-                        (p) => Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.shopping_bag_outlined),
-                            title: Text(p.name),
-                            subtitle: Text(
+                        (p) => NaItemCard(
+                          title: p.name,
+                          subtitle:
                               '${p.brand ?? "Marca não informada"} • ${p.category ?? "Sem categoria"}',
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => openProduct(p),
-                          ),
+                          onTap: () => openProduct(p),
                         ),
                       )
                       .toList(),
@@ -137,7 +138,7 @@ class _HomePageState extends State<HomePage> {
                         body: AnimatedBuilder(
                           animation: widget.scope,
                           builder: (context, _) => SingleChildScrollView(
-                            padding: const EdgeInsets.all(20),
+                            padding: NaSpace.page,
                             child: Column(
                               children: [
                                 const Text(
@@ -199,7 +200,7 @@ class ProductPage extends StatelessWidget {
       return Scaffold(
         appBar: AppBar(title: Text(product.name)),
         body: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: NaSpace.page,
           children: [
             if (product.isDemo)
               const Text('Produto fictício • não importar para o Supabase'),
@@ -217,13 +218,6 @@ class ErrorPanel extends StatelessWidget {
   final Object? error;
   final VoidCallback retry;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      children: [
-        Text('Não foi possível carregar: $error'),
-        TextButton(onPressed: retry, child: const Text('Tentar novamente')),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) =>
+      NaError(message: '$error', onRetry: retry);
 }

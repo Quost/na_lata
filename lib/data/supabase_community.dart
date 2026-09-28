@@ -1,10 +1,10 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'clients/backend_client.dart';
 import '../core/contracts.dart';
 import '../core/models.dart';
 
 class SupabaseCommunity implements CommunityRepository {
   SupabaseCommunity(this.client);
-  final SupabaseClient client;
+  final BackendClient client;
   @override
   Future<Set<String>> favorites() async =>
       throw const FeaturePending('T18 — favoritos');

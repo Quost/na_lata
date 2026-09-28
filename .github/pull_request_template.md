@@ -16,6 +16,8 @@ Screenshot ou vídeo do comportamento.
 - [ ] Escrevi código Flutter e respeitei o contrato da issue.
 - [ ] Rodei flutter analyze e flutter test.
 - [ ] Testei caminho feliz e um caso de erro/vazio.
+- [ ] Adicionei testes automatizados relevantes para regras/interações, ou expliquei por que o teste manual basta.
+- [ ] Usei o design system e conferi texto ampliado/tela pequena.
 - [ ] Solicitei revisão de um colega.
 - [ ] Não incluí credenciais administrativas nem alterei dependências sem combinar.
 
