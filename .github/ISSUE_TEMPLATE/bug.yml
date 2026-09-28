@@ -1,0 +1,16 @@
+name: Bug encontrado
+description: Registre um problema reproduzível
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir
+      description: Informe passos, resultado esperado e observado.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Aparelho e modo (demo ou Supabase)
