@@ -6,6 +6,8 @@ Este repositório é o **ponto de partida**, não o aplicativo resolvido. A nave
 
 ## Começar em 5 minutos
 
+**Para conectar ao banco da turma:** siga [o tutorial dos alunos](docs/ALUNOS.md), coloque o arquivo recebido em `config/classroom.json` e execute `dart run tool/run.dart`. No VS Code, selecione **Na Lata · Supabase da turma** e pressione F5.
+
 Requer Flutter **3.38.5** (Dart 3.10.4), Android SDK e celular com depuração USB ou emulador.
 
 ```sh
@@ -31,6 +33,7 @@ Sem configuração, abre em **DEMONSTRAÇÃO**: produtos e avaliações fictíci
 
 - [Roteiro da aula e preparação do professor](docs/AULA.md)
 - [Configurar Supabase](docs/SUPABASE.md)
+- [Tutorial dos alunos](docs/ALUNOS.md)
 - [Contratos e pontos de integração](docs/CONTRATOS.md)
 - [Backlog de 24 entregas](docs/BACKLOG.md)
 - [Verificação final](docs/ACEITE.md)
