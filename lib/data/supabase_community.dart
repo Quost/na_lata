@@ -6,11 +6,40 @@ class SupabaseCommunity implements CommunityRepository {
   SupabaseCommunity(this.client);
   final BackendClient client;
   @override
-  Future<Set<String>> favorites() async =>
-      throw const FeaturePending('T18 — favoritos');
+  Future<Set<String>> favorites() async {
+    final userId = client.requireUserId;
+    final rows = await client.request(
+      (db) => db.from('favorites').select('barcode').eq('user_id', userId),
+    );
+    return (rows as List)
+        .map((row) => (row as Map<String, dynamic>)['barcode'] as String)
+        .toSet();
+  }
+
   @override
-  Future<void> setFavorite(String barcode, bool value) async =>
-      throw const FeaturePending('T18 — favoritos');
+  Future<void> setFavorite(String barcode, bool value) async {
+    final userId = client.requireUserId;
+    if (value) {
+      await client.request(
+        (db) => db
+            .from('favorites')
+            .upsert(
+              {'user_id': userId, 'barcode': barcode},
+              onConflict: 'user_id,barcode',
+              ignoreDuplicates: true,
+            ),
+      );
+      return;
+    }
+    await client.request(
+      (db) => db
+          .from('favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('barcode', barcode),
+    );
+  }
+
   @override
   Future<void> report(String reviewId, String reason) async =>
       throw const FeaturePending('T19 — denúncia');
