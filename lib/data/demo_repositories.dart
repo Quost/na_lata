@@ -1,5 +1,7 @@
 import '../core/contracts.dart';
 import '../core/models.dart';
+import '../features/report/report_logic.dart';
+import 'clients/app_failure.dart';
 
 const demoProducts = [
   Product(
@@ -106,14 +108,25 @@ class DemoReviews implements ReviewRepository {
 }
 
 class DemoCommunity implements CommunityRepository {
+  // Modo demo tem um único usuário; uma denúncia por comentário.
+  final _reportedReviews = <String>{};
   @override
   Future<Set<String>> favorites() async => {};
   @override
   Future<void> setFavorite(String barcode, bool value) async =>
       throw const FeaturePending('T18 — favoritos');
   @override
-  Future<void> report(String reviewId, String reason) async =>
-      throw const FeaturePending('T19 — denúncias');
+  Future<void> report(String reviewId, String reason) async {
+    if (ReportReason.tryParse(reason) == null || reviewId.trim().isEmpty) {
+      throw const AppFailure(
+        FailureKind.validation,
+        'Escolha um motivo: ofensa, spam ou outro.',
+      );
+    }
+    if (!_reportedReviews.add(reviewId)) {
+      throw const AppFailure(FailureKind.conflict, duplicateReportMessage);
+    }
+  }
   @override
   Future<List<Sighting>> sightings(String barcode) async => [];
   @override
