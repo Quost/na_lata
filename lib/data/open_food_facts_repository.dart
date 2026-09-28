@@ -4,6 +4,7 @@ import 'clients/json_api_client.dart';
 import '../core/models.dart';
 
 const offProductNameFallback = 'Produto sem nome';
+const offFields = 'code,product_name,brands,categories_tags,image_front_url';
 
 final _offBarcode = RegExp(r'^\d{8,14}$');
 
@@ -16,8 +17,20 @@ class HttpOpenFoodFactsRepository implements OpenFoodFactsRepository {
   final JsonApiClient api;
   @override
   Future<Product?> lookup(String barcode) async {
-    // T01: implementar HTTP, timeout, parsing e produto inexistente.
-    throw const FeaturePending('T01 — Open Food Facts');
+    if (!isOffBarcode(barcode)) {
+      throw const AppFailure(
+        FailureKind.validation,
+        'Informe um código de barras de 8 a 14 dígitos.',
+      );
+    }
+    final uri = Uri.https(
+      'world.openfoodfacts.org',
+      '/api/v2/product/$barcode.json',
+      {'fields': offFields},
+    );
+    // O OFF responde produto inexistente com HTTP 404 e corpo {"status":0}.
+    final json = await api.getObject(uri, acceptStatus: const {404});
+    return parseOffProduct(json, barcode);
   }
 }
 
