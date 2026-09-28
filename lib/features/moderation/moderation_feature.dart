@@ -41,8 +41,8 @@ class _ModerationFeatureState extends State<ModerationFeature> {
           ),
           const SizedBox(height: NaSpace.md),
           const Text(
-            'Filtro demonstrativo com lista explícita. Não usa IA e não detecta '
-            'todos os casos.',
+            'Filtro demonstrativo, com lista explícita e sem IA. '
+            'Não detecta todos os casos.',
           ),
           const SizedBox(height: NaSpace.lg),
           TextField(
@@ -59,7 +59,7 @@ class _ModerationFeatureState extends State<ModerationFeature> {
           if (_commentController.text.trim().isEmpty)
             const NaEmpty(
               title: 'Comentário vazio',
-              message: 'Digite um comentário para ver a demonstração do filtro.',
+              message: 'Digite um comentário para ver o filtro.',
               icon: Icons.chat_bubble_outline,
             )
           else ...[
@@ -69,8 +69,8 @@ class _ModerationFeatureState extends State<ModerationFeature> {
             ),
             NaSection(
               title: 'Entrada original, sem alteração',
-                description:
-                  'Na integração, armazena-se o texto original; a máscara é '
+              description:
+                  'Na integração, o original é armazenado; a máscara é '
                   'apenas para exibição.',
               child: SelectableText(_commentController.text),
             ),

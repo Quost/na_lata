@@ -44,78 +44,91 @@ void main() {
   });
 
   group('ModerationFeature', () {
-    testWidgets('demonstra máscara e preserva texto de entrada', (tester) async {
-      final scope = makeScope();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: NaTheme.light,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: ModerationFeature(
-                context: FeatureContext(scope: scope, openProduct: (_) {}),
+    testWidgets(
+      'demonstra máscara e preserva texto de entrada',
+      (tester) async {
+        final scope = makeScope();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: NaTheme.light,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ModerationFeature(
+                  context: FeatureContext(scope: scope, openProduct: (_) {}),
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText &&
-              widget.data == 'A embalagem é uma ***, mas o produto é ótimo.',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText &&
-              widget.data == 'A embalagem é uma merda, mas o produto é ótimo.',
-        ),
-        findsOneWidget,
-      );
-      await tester.enterText(find.byType(TextField), 'Ótimo produto, idiota!');
-      await tester.pump();
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText && widget.data == 'Ótimo produto, ***!',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText && widget.data == 'Ótimo produto, idiota!',
-        ),
-        findsOneWidget,
-      );
-      scope.dispose();
-    });
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+              widget.data ==
+                'A embalagem é uma ***, mas o produto é ótimo.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+                widget.data ==
+                    'A embalagem é uma merda, mas o produto é ótimo.',
+          ),
+          findsOneWidget,
+        );
+        await tester.enterText(
+          find.byType(TextField),
+          'Ótimo produto, idiota!',
+        );
+        await tester.pump();
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+                widget.data == 'Ótimo produto, ***!',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+                widget.data == 'Ótimo produto, idiota!',
+          ),
+          findsOneWidget,
+        );
+        scope.dispose();
+      },
+    );
 
-    testWidgets('mostra estado vazio e funciona sem produto', (tester) async {
-      final scope = makeScope();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: NaTheme.light,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: ModerationFeature(
-                context: FeatureContext(scope: scope, openProduct: (_) {}),
+    testWidgets(
+      'mostra estado vazio e funciona sem produto',
+      (tester) async {
+        final scope = makeScope();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: NaTheme.light,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ModerationFeature(
+                  context: FeatureContext(scope: scope, openProduct: (_) {}),
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.enterText(find.byType(TextField), '   ');
-      await tester.pump();
-      expect(find.text('Comentário vazio'), findsOneWidget);
-      expect(
-        find.text('Demonstração local; nenhum produto selecionado.'),
-        findsOneWidget,
-      );
-      scope.dispose();
-    });
+        );
+        await tester.enterText(find.byType(TextField), '   ');
+        await tester.pump();
+        expect(find.text('Comentário vazio'), findsOneWidget);
+        expect(
+          find.text('Demonstração local; nenhum produto selecionado.'),
+          findsOneWidget,
+        );
+        scope.dispose();
+      },
+    );
   });
 }
