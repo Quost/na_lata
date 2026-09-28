@@ -17,7 +17,6 @@ class SummaryFeature extends StatefulWidget {
 class _SummaryFeatureState extends State<SummaryFeature> {
   RatingSummary? _summary;
   String? _error;
-  bool _loading = false;
   int _generation = 0;
 
   AppScope get _scope => widget.context.scope;
@@ -28,10 +27,7 @@ class _SummaryFeatureState extends State<SummaryFeature> {
     super.initState();
     _scope.addListener(_reload);
     final product = _product;
-    if (product != null) {
-      _loading = true;
-      _fetch(product.barcode, _generation);
-    }
+    if (product != null) _fetch(product.barcode, _generation);
   }
 
   @override
@@ -56,14 +52,10 @@ class _SummaryFeatureState extends State<SummaryFeature> {
       setState(() {
         _summary = null;
         _error = null;
-        _loading = false;
       });
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _error = null);
     _fetch(product.barcode, generation);
   }
 
@@ -72,10 +64,7 @@ class _SummaryFeatureState extends State<SummaryFeature> {
       final reviews = await _scope.reviews.forProduct(barcode);
       final summary = summarizeReviews(reviews);
       if (!mounted || generation != _generation) return;
-      setState(() {
-        _summary = summary;
-        _loading = false;
-      });
+      setState(() => _summary = summary);
     } on AppFailure catch (e) {
       _fail(e.message, generation);
     } on FeaturePending catch (e) {
@@ -90,10 +79,7 @@ class _SummaryFeatureState extends State<SummaryFeature> {
 
   void _fail(String message, int generation) {
     if (!mounted || generation != _generation) return;
-    setState(() {
-      _error = message;
-      _loading = false;
-    });
+    setState(() => _error = message);
   }
 
   @override
