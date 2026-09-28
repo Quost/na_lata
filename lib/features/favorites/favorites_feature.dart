@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
+import '../../core/contracts.dart';
 import '../../core/models.dart';
 import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
