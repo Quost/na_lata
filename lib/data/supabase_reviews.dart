@@ -1,20 +1,25 @@
-import 'clients/backend_client.dart';
-import '../core/contracts.dart';
-import '../core/models.dart';
+// lib/data/supabase_reviews.dart
 
-class SupabaseReviews implements ReviewRepository {
-  SupabaseReviews(this.client);
-  final BackendClient client;
-  @override
-  Future<List<Review>> forProduct(String barcode) async =>
-      throw const FeaturePending('T08 — consultar avaliações');
-  @override
-  Future<List<Review>> mine() async =>
-      throw const FeaturePending('T08 — minhas avaliações');
-  @override
-  Future<void> save(ReviewDraft draft) async =>
-      throw const FeaturePending('T08 — salvar avaliação');
-  @override
-  Future<void> delete(String reviewId) async =>
-      throw const FeaturePending('T17 — excluir avaliação');
+@override
+Future delete(String reviewId) async {
+  if (reviewId.trim().isEmpty) {
+    throw const AppFailure('Identificador da avaliação inválido.');
+  }
+
+  if (isDemo) {
+    await Future.delayed(const Duration(milliseconds: 200));
+    _demoReviews.removeWhere((r) => r.id == reviewId);
+    return;
+  }
+
+  try {
+    final client = _client ?? Supabase.instance.client;
+    // Filtra pelo ID da avaliação; a autorização do usuário é garantida via RLS no Supabase
+    await client
+        .from('reviews')
+        .delete()
+        .eq('id', reviewId);
+  } catch (e) {
+    throw AppFailure('Erro ao excluir avaliação: $e');
+  }
 }
