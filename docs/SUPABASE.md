@@ -3,7 +3,7 @@
 1. Criar projeto exclusivo para a aula no Supabase. Não reutilizar banco de produção.
 2. Abrir SQL Editor e executar `supabase/migrations/202609280001_classroom.sql` **uma vez**. A migração é transacional e não apaga tabelas existentes.
 3. Em Authentication → Sign In / Providers, habilitar **Anonymous Sign-Ins**. Os caminhos do painel podem variar.
-4. Copiar a URL e a chave pública/publishable (a chave anon legada também funciona). **Nunca usar service_role ou secret no app.**
+4. Copiar a URL e a chave pública `sb_publishable_...`. O launcher desta turma exige esse formato; chaves legadas JWT não são aceitas. **Nunca usar service_role ou secret no app.**
 5. Preparar configuração local:
 
 ```sh
@@ -13,6 +13,12 @@ flutter run --dart-define-from-file=config/classroom.json
 ```
 
 Esse JSON está ignorado pelo Git. Distribua a configuração à turma. A chave pública não concede acesso administrativo: permissões e RLS continuam obrigatórias.
+
+O arquivo local desta máquina já está preenchido com a URL/chave fornecidas. Envie **config/classroom.json** aos alunos e o link do [tutorial](ALUNOS.md). Ele cumpre o papel de configuração por ambiente, carregada no build pelo Flutter; não é necessário adicionar dotenv ou embutir um `.env` como asset.
+
+Para conferir o serviço: `dart run tool/check_supabase.dart`. Depois de habilitar o login anônimo e aplicar a migração, use `dart run tool/check_supabase.dart --session` para criar um usuário de diagnóstico e confirmar perfil e leitura das tabelas. Não publica avaliações; o usuário criado permanece no Auth para inspeção pelo professor. O comando não imprime chaves nem tokens.
+
+Uma resposta 401 em `/rest/v1/` sem sessão não prova que a chave é inválida. O diagnóstico verifica primeiro `/auth/v1/settings` e, quando solicitado, uma sessão real; tabelas da aula exigem usuário autenticado.
 
 A identidade anônima persiste no aparelho. Reinstalar/limpar armazenamento cria nova identidade, sem recuperar avaliações anteriores. Não usar apelido como autorização. Para uso público após a aula, revisar autenticação, CAPTCHA e limites; este projeto foi pensado para uma turma controlada.
 
