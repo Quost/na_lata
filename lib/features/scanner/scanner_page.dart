@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../design_system/na_lata_ui.dart';
 import 'scanner_flow.dart';
 
 /// Resultado da tela: um código lido ou pedido de digitação manual.
@@ -54,10 +55,10 @@ class _ScannerPageState extends State<ScannerPage> {
         const Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: NaSpace.page,
             child: Card(
               child: Padding(
-                padding: EdgeInsets.all(12),
+                padding: EdgeInsets.all(NaSpace.md),
                 child: Text('Aponte para o código de barras da embalagem.'),
               ),
             ),
@@ -81,24 +82,19 @@ class _ScannerError extends StatelessWidget {
       _ => 'Não foi possível abrir a câmera.',
     };
     return ColoredBox(
-      color: Theme.of(context).colorScheme.surface,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.no_photography_outlined, size: 48),
-              const SizedBox(height: 12),
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    Navigator.of(context).pop(const ScanResult.manual()),
-                icon: const Icon(Icons.keyboard),
-                label: const Text('Digitar código'),
-              ),
-            ],
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SingleChildScrollView(
+        padding: NaSpace.page,
+        child: NaContent(
+          child: NaEmpty(
+            title: 'Câmera indisponível',
+            message: message,
+            icon: Icons.no_photography_outlined,
+            action: NaButton(
+              label: 'Digitar código',
+              onPressed: () =>
+                  Navigator.of(context).pop(const ScanResult.manual()),
+            ),
           ),
         ),
       ),

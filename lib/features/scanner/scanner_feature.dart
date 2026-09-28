@@ -1,25 +1,39 @@
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/contracts.dart';
+import '../../data/clients/app_failure.dart';
+import '../../design_system/na_lata_ui.dart';
 import 'scanner_flow.dart';
 import 'scanner_page.dart';
 
+typedef ScannerLauncher = Future<ScanResult?> Function(BuildContext context);
+
+Future<ScanResult?> _openCamera(BuildContext context) => Navigator.of(
+  context,
+).push<ScanResult>(MaterialPageRoute(builder: (_) => const ScannerPage()));
+
 class ScannerFeature extends StatefulWidget {
-  const ScannerFeature({super.key, required this.context});
+  const ScannerFeature({
+    super.key,
+    required this.context,
+    this.openScanner = _openCamera,
+  });
   final FeatureContext context;
+
+  /// Abre a câmera; testes injetam uma leitura simulada.
+  final ScannerLauncher openScanner;
   @override
   State<ScannerFeature> createState() => _ScannerFeatureState();
 }
 
 class _ScannerFeatureState extends State<ScannerFeature> {
   bool _busy = false;
-  String? _message;
+  String? _notFound;
+  String? _error;
   String? _lastCode;
 
   Future<void> _scan() async {
-    final result = await Navigator.of(
-      context,
-    ).push<ScanResult>(MaterialPageRoute(builder: (_) => const ScannerPage()));
+    final result = await widget.openScanner(context);
     if (!mounted || result == null) return;
     final code = result.code ?? await _askCode();
     if (code != null) await _lookup(code);
@@ -34,7 +48,8 @@ class _ScannerFeatureState extends State<ScannerFeature> {
     final scope = widget.context.scope;
     setState(() {
       _busy = true;
-      _message = null;
+      _notFound = null;
+      _error = null;
       _lastCode = code;
     });
     try {
@@ -45,16 +60,15 @@ class _ScannerFeatureState extends State<ScannerFeature> {
       );
       if (!mounted) return;
       if (product == null) {
-        setState(() => _message = 'Produto $code não encontrado.');
+        setState(() => _notFound = code);
         return;
       }
-      _lastCode = null;
       widget.context.openProduct(product);
       scope.refresh();
+    } on AppFailure catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } on FeaturePending catch (e) {
-      if (mounted) setState(() => _message = '$e. Leitura: $code');
-    } catch (e) {
-      if (mounted) setState(() => _message = 'Falha ao consultar $code: $e');
+      if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -65,37 +79,33 @@ class _ScannerFeatureState extends State<ScannerFeature> {
     final lastCode = _lastCode;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ler código de barras',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            const Text('Use a câmera para encontrar ou importar um produto.'),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _busy ? null : _scan,
-              icon: _busy
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.qr_code_scanner),
-              label: Text(_busy ? 'Consultando…' : 'Escanear código'),
-            ),
-            if (_message != null) ...[
-              const SizedBox(height: 12),
-              Text(_message!),
-              if (lastCode != null && !_busy)
-                TextButton(
-                  onPressed: () => _lookup(lastCode),
-                  child: const Text('Tentar novamente'),
+        padding: const EdgeInsets.all(NaSpace.lg),
+        child: NaSection(
+          title: 'Ler código de barras',
+          description: 'Use a câmera para encontrar ou importar um produto.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              NaButton(
+                label: 'Escanear código',
+                loading: _busy,
+                onPressed: _scan,
+              ),
+              if (_notFound != null)
+                NaEmpty(
+                  title: 'Produto não encontrado',
+                  message:
+                      'O código $_notFound não está no catálogo nem no '
+                      'Open Food Facts. Confira a embalagem e escaneie de novo.',
+                  icon: Icons.search_off,
+                ),
+              if (_error != null && lastCode != null)
+                NaError(
+                  message: 'Código $lastCode: $_error',
+                  onRetry: () => _lookup(lastCode),
                 ),
             ],
-          ],
+          ),
         ),
       ),
     );
