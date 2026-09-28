@@ -42,7 +42,13 @@ class BackendClient {
         FailureKind.network,
         'Não foi possível conectar. Verifique sua internet.',
       );
-    } on AuthException {
+    } on AuthException catch (error) {
+      if (error.code == 'anonymous_provider_disabled') {
+        throw const AppFailure(
+          FailureKind.unauthorized,
+          'O login anônimo está desabilitado no Supabase. Peça ao professor para habilitar Anonymous Sign-Ins em Authentication e reinicie o app.',
+        );
+      }
       throw const AppFailure(
         FailureKind.unauthorized,
         'Não foi possível validar sua sessão. Reinicie o aplicativo.',
