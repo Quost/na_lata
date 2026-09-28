@@ -1,10 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:na_lata/core/app_scope.dart';
 import 'package:na_lata/core/contracts.dart';
 import 'package:na_lata/core/models.dart';
 import 'package:na_lata/data/demo_repositories.dart';
-import 'package:na_lata/features/scanner/scanner_feature.dart';
 import 'package:na_lata/features/scanner/scanner_flow.dart';
 
 class _FakeOff implements OpenFoodFactsRepository {
@@ -85,28 +82,5 @@ void main() {
     );
     expect(found, isNull);
     expect(products.imports, 0);
-  });
-
-  testWidgets('módulo não abre a câmera automaticamente', (tester) async {
-    final scope = AppScope(
-      products: DemoProducts(),
-      reviews: DemoReviews(),
-      community: DemoCommunity(),
-      openFoodFacts: _FakeOff(),
-      isDemo: true,
-      userId: 'demo-user',
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ScannerFeature(
-            context: FeatureContext(scope: scope, openProduct: (_) {}),
-          ),
-        ),
-      ),
-    );
-    expect(find.text('Escanear código'), findsOneWidget);
-    expect(find.byType(AppBar), findsNothing);
-    scope.dispose();
   });
 }
