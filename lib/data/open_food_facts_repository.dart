@@ -5,6 +5,11 @@ import '../core/models.dart';
 
 const offProductNameFallback = 'Produto sem nome';
 
+final _offBarcode = RegExp(r'^\d{8,14}$');
+
+/// Código aceito na URL do OFF: 8 a 14 dígitos, mantido como texto.
+bool isOffBarcode(String barcode) => _offBarcode.hasMatch(barcode);
+
 class HttpOpenFoodFactsRepository implements OpenFoodFactsRepository {
   HttpOpenFoodFactsRepository({JsonApiClient? api})
     : api = api ?? JsonApiClient();
