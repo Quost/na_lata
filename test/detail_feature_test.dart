@@ -8,7 +8,9 @@ import 'package:na_lata/features/detail/detail_feature.dart';
 
 /// Helper para montar o widget de teste com Material e tema.
 Widget _harness(FeatureContext ctx) => MaterialApp(
-  home: Scaffold(body: SingleChildScrollView(child: DetailFeature(context: ctx))),
+  home: Scaffold(
+    body: SingleChildScrollView(child: DetailFeature(context: ctx)),
+  ),
 );
 
 /// Cria um [AppScope] fake para testes.
@@ -71,9 +73,7 @@ void main() {
       scope.dispose();
     });
 
-    testWidgets('exibe "Sem categoria" quando category é null', (
-      tester,
-    ) async {
+    testWidgets('exibe "Sem categoria" quando category é null', (tester) async {
       final scope = _scope();
       final product = const Product(
         barcode: 'demo-sem-cat',
@@ -108,10 +108,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Imagem indisponível'), findsOneWidget);
-      expect(
-        find.byIcon(Icons.image_not_supported_outlined),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.image_not_supported_outlined), findsOneWidget);
 
       scope.dispose();
     });
