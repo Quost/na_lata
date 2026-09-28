@@ -94,28 +94,26 @@ void main() {
     expect(reviews.requested, isEmpty);
   });
 
-  testWidgets('notas [1,5,5]: média arredondada só na tela, total e contagens', (
-    tester,
-  ) async {
-    reviews.items = [
-      review(1),
-      review(5),
-      review(5),
-      review(2, barcode: 'outro-produto'),
-    ];
-    await pumpSummary(tester, forProduct: product);
-    await tester.pumpAndSettle();
-    expect(reviews.requested, [product.barcode]);
-    expect(find.text('3,7 de 5 · 3 avaliações'), findsOneWidget);
-    expect(find.text('Total de avaliações: 3'), findsOneWidget);
-    expect([for (var s = 1; s <= 5; s++) countAt(tester, s)], [
-      '1',
-      '0',
-      '0',
-      '0',
-      '2',
-    ]);
-  });
+  testWidgets(
+    'notas [1,5,5]: média arredondada só na tela, total e contagens',
+    (tester) async {
+      reviews.items = [
+        review(1),
+        review(5),
+        review(5),
+        review(2, barcode: 'outro-produto'),
+      ];
+      await pumpSummary(tester, forProduct: product);
+      await tester.pumpAndSettle();
+      expect(reviews.requested, [product.barcode]);
+      expect(find.text('3,7 de 5 · 3 avaliações'), findsOneWidget);
+      expect(find.text('Total de avaliações: 3'), findsOneWidget);
+      expect(
+        [for (var s = 1; s <= 5; s++) countAt(tester, s)],
+        ['1', '0', '0', '0', '2'],
+      );
+    },
+  );
 
   testWidgets('sem avaliações mostra total 0 e cinco contagens zeradas', (
     tester,
@@ -124,13 +122,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Sem avaliações'), findsOneWidget);
     expect(find.text('Total de avaliações: 0'), findsOneWidget);
-    expect([for (var s = 1; s <= 5; s++) countAt(tester, s)], [
-      '0',
-      '0',
-      '0',
-      '0',
-      '0',
-    ]);
+    expect(
+      [for (var s = 1; s <= 5; s++) countAt(tester, s)],
+      ['0', '0', '0', '0', '0'],
+    );
   });
 
   testWidgets('mostra loading enquanto carrega', (tester) async {
