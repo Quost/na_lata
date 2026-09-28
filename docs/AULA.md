@@ -9,6 +9,10 @@
 - Configurar main com uma aprovação e check `verify`, se a organização/plano permitir. Evitar exigência de administrador para cada PR.
 - Manter main executável. Só o professor coordena mudanças no núcleo e migrações.
 
+## Limitação do GitHub desta organização
+
+A configuração de proteção de main foi recusada pelo GitHub (HTTP 403: recurso indisponível no plano atual para este repositório privado). Revisão e check continuam obrigatórios pelo combinado da aula, mas não são impostos pelo servidor. Professor coordena os merges; alunos não fazem push direto em main. Não foi alterada a visibilidade do repositório.
+
 ## Cronograma
 
 | Horário | Atividade |

@@ -34,6 +34,8 @@ Sem configuração, abre em **DEMONSTRAÇÃO**: produtos e avaliações fictíci
 - [Contratos e pontos de integração](docs/CONTRATOS.md)
 - [Backlog de 24 entregas](docs/BACKLOG.md)
 - [Verificação final](docs/ACEITE.md)
+- [Resultados de validação do template](docs/VALIDACAO.md)
+- [Links das issues no GitHub](docs/ISSUES_GITHUB.md)
 
 ```sh
 flutter analyze
