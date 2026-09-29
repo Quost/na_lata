@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_scope.dart';
 import '../../core/contracts.dart';
 import '../../core/models.dart';
 import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
- 
+
 /// Chave de agrupamento da marca: trim + minúsculas. Nula/vazia = sem marca.
 String? brandKey(String? raw) {
   final key = raw?.trim().toLowerCase();
   return key == null || key.isEmpty ? null : key;
 }
- 
+
 /// Nota de produto e de marca é sempre um inteiro de 1 a 5.
 bool isValidRating(int rating) => rating >= 1 && rating <= 5;
- 
+
 String formatAverage(double average) =>
     average.toStringAsFixed(1).replaceAll('.', ',');
- 
+
 String reviewsLabel(int count) =>
     count == 1 ? '1 avaliação' : '$count avaliações';
- 
+
 String productsLabel(int count) => count == 1 ? '1 produto' : '$count produtos';
- 
+
 String ratingLabel(double? average, int count) => average == null || count == 0
     ? 'Sem avaliações'
     : '${formatAverage(average)} de 5 · ${reviewsLabel(count)}';
- 
+
 class ProductRating {
   const ProductRating({
     required this.product,
@@ -36,7 +37,7 @@ class ProductRating {
   final double? average;
   final int count;
 }
- 
+
 class BrandSummary {
   const BrandSummary({
     required this.key,
@@ -47,13 +48,13 @@ class BrandSummary {
   });
   final String key, name;
   final List<ProductRating> products;
- 
+
   /// Média ponderada: soma de todas as notas ÷ total de avaliações.
   /// Nula quando a marca ainda não tem avaliações.
   final double? average;
   final int count;
 }
- 
+
 String _displayName(String raw) {
   final name = raw.trim();
   // brand_key vem em minúsculas do banco; deixar legível na tela.
@@ -63,7 +64,7 @@ String _displayName(String raw) {
       .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
       .join(' ');
 }
- 
+
 /// Agrega as avaliações de TODOS os produtos de cada marca (não faz média
 /// das médias). Produtos sem marca ficam fora. Notas fora de 1–5 e produtos
 /// repetidos são ignorados.
@@ -80,7 +81,7 @@ List<BrandSummary> aggregateBrands(
     names.putIfAbsent(key, () => _displayName(product.brand!));
     byBrand.putIfAbsent(key, () => []).add(product);
   }
- 
+
   final brands = <BrandSummary>[];
   byBrand.forEach((key, items) {
     var brandSum = 0, brandCount = 0;
@@ -103,9 +104,8 @@ List<BrandSummary> aggregateBrands(
       );
     }
     rated.sort(
-      (a, b) => a.product.name.toLowerCase().compareTo(
-        b.product.name.toLowerCase(),
-      ),
+      (a, b) =>
+          a.product.name.toLowerCase().compareTo(b.product.name.toLowerCase()),
     );
     brands.add(
       BrandSummary(
@@ -120,7 +120,7 @@ List<BrandSummary> aggregateBrands(
   brands.sort((a, b) => a.key.compareTo(b.key));
   return brands;
 }
- 
+
 /// Lê o catálogo importado e as avaliações pelos contratos do AppScope.
 /// Falhas dos repositórios são propagadas, nunca viram lista vazia.
 Future<List<BrandSummary>> loadBrands(
@@ -136,31 +136,29 @@ Future<List<BrandSummary>> loadBrands(
     for (var i = 0; i < branded.length; i++) branded[i].barcode: lists[i],
   });
 }
- 
+
 String brandsErrorMessage(Object error) {
   if (error is AppFailure) return error.message;
   if (error is FeaturePending) return error.toString();
   return 'Algo deu errado ao montar as marcas. Tente novamente.';
 }
- 
+
 class BrandsFeature extends StatefulWidget {
   const BrandsFeature({super.key, required this.context});
   final FeatureContext context;
   @override
   State<BrandsFeature> createState() => _BrandsFeatureState();
 }
- 
+
 class _BrandsFeatureState extends State<BrandsFeature> {
   late Future<List<BrandSummary>> _future = _load();
   String? _selectedKey;
- 
-  Future<List<BrandSummary>> _load() => loadBrands(
-    widget.context.scope.products,
-    widget.context.scope.reviews,
-  );
- 
+
+  Future<List<BrandSummary>> _load() =>
+      loadBrands(widget.context.scope.products, widget.context.scope.reviews);
+
   void _reload() => setState(() => _future = _load());
- 
+
   @override
   Widget build(BuildContext context) => NaSection(
     title: 'Explorar marcas',
@@ -193,7 +191,7 @@ class _BrandsFeatureState extends State<BrandsFeature> {
       },
     ),
   );
- 
+
   Widget _list(List<BrandSummary> brands) => Column(
     children: [
       for (final brand in brands)
@@ -207,7 +205,7 @@ class _BrandsFeatureState extends State<BrandsFeature> {
         ),
     ],
   );
- 
+
   Widget _detail(BrandSummary brand) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -238,4 +236,3 @@ class _BrandsFeatureState extends State<BrandsFeature> {
     ],
   );
 }
- 

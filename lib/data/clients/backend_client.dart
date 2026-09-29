@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'app_failure.dart';
 
 /// Uma instância compartilhada, injetada nos repositórios em main.dart.

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:na_lata/design_system/na_lata_ui.dart';
 
-
 import 'package:na_lata/core/core.dart';
-
 
 class RankingEntry {
   const RankingEntry({
@@ -24,7 +22,6 @@ class RankingData {
   final List<Review> reviews;
 }
 
-
 List<RankingEntry> buildRanking({
   required Iterable<Product> products,
   required Iterable<Review> reviews,
@@ -44,11 +41,9 @@ List<RankingEntry> buildRanking({
     if (category != null && p.category != category) continue;
     final count = counts[p.barcode] ?? 0;
     if (count == 0) continue; // não avaliado fica fora
-    entries.add(RankingEntry(
-      product: p,
-      average: sums[p.barcode]! / count,
-      count: count,
-    ));
+    entries.add(
+      RankingEntry(product: p, average: sums[p.barcode]! / count, count: count),
+    );
   }
 
   entries.sort((a, b) {
@@ -80,7 +75,6 @@ class RankingFeature extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = featureContext.scope;
     return RankingView(
-
       initialCategory: featureContext.product?.category,
       loader: () async {
         // TODO: trocar pelos métodos reais dos repositórios (contratos do
@@ -191,8 +185,10 @@ class _RankingViewState extends State<RankingView> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: NaSpace.sm),
                     child: NaItemCard(
-                      leading: Text('${i + 1}º',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      leading: Text(
+                        '${i + 1}º',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       title: ranking[i].product.name,
                       subtitle:
                           '${ranking[i].count} ${ranking[i].count == 1 ? 'avaliação' : 'avaliações'}',
