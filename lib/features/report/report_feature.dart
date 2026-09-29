@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/contracts.dart';
 import '../../core/models.dart';
+import '../../core/ui_format.dart';
 import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
 import '../moderation/comment_moderator.dart';
@@ -53,8 +54,7 @@ class _ReportFeatureState extends State<ReportFeature> {
     }
   }
 
-  String _messageFor(Object error) =>
-      error is AppFailure ? error.message : error.toString();
+  String _messageFor(Object error) => messageForError(error);
 
   Future<void> _load() async {
     final product = _product;

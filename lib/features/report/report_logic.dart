@@ -1,4 +1,5 @@
 import '../../core/models.dart';
+import '../../core/ui_format.dart';
 
 /// Mensagem exibida quando o mesmo usuário denuncia o mesmo comentário de novo.
 const duplicateReportMessage = 'Você já denunciou este comentário.';
@@ -38,10 +39,5 @@ List<Review> reportableComments(List<Review> reviews) {
 bool canReport(Review review, String currentUserId) =>
     review.userId != currentUserId;
 
-/// Data curta dd/MM/aaaa, sem depender de pacote de internacionalização.
-String formatReportDate(DateTime date) {
-  final local = date.toLocal();
-  final day = local.day.toString().padLeft(2, '0');
-  final month = local.month.toString().padLeft(2, '0');
-  return '$day/$month/${local.year}';
-}
+/// Data curta dd/MM/aaaa (delegada ao util compartilhado).
+String formatReportDate(DateTime date) => formatShortDate(date);

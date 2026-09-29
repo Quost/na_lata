@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/contracts.dart';
 import '../../core/models.dart';
+import '../../core/ui_format.dart';
 import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
 
@@ -179,9 +180,5 @@ class _MyReviewTile extends StatelessWidget {
     );
   }
 
-  static String _date(DateTime d) {
-    final local = d.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(local.day)}/${two(local.month)}/${local.year}';
-  }
+  static String _date(DateTime d) => formatShortDate(d);
 }

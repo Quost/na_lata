@@ -1,9 +1,8 @@
 // Autoria: Leonardo Volpi (T14). Adaptado à fiação atual do core.
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
-import '../../core/contracts.dart';
 import '../../core/models.dart';
-import '../../data/clients/app_failure.dart';
+import '../../core/ui_format.dart';
 import '../../design_system/na_lata_ui.dart';
 
 class RankingEntry {
@@ -125,12 +124,10 @@ class _RankingViewState extends State<RankingView> {
 
   void _reload() => setState(() => _future = widget.loader());
 
-  String _errorMessage(Object error) {
-    // AppFailure traz uma mensagem segura para exibir (ver CLIENTES.md).
-    if (error is AppFailure) return error.message;
-    if (error is FeaturePending) return '$error';
-    return 'Não deu para carregar o ranking. Tente de novo.';
-  }
+  String _errorMessage(Object error) => messageForError(
+    error,
+    fallback: 'Não deu para carregar o ranking. Tente de novo.',
+  );
 
   @override
   Widget build(BuildContext context) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/contracts.dart';
 import '../../core/models.dart';
+import '../../core/ui_format.dart';
 import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
 import '../moderation/comment_moderator.dart';
@@ -14,12 +15,8 @@ import '../moderation/comment_moderator.dart';
 List<Review> sortNewestFirst(List<Review> reviews) =>
     [...reviews]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-/// Data curta dd/MM/aaaa, sem depender de pacote de internacionalização.
-String formatCommentDate(DateTime date) {
-  final local = date.toLocal();
-  String two(int value) => value.toString().padLeft(2, '0');
-  return '${two(local.day)}/${two(local.month)}/${local.year}';
-}
+/// Data curta dd/MM/aaaa (delegada ao util compartilhado).
+String formatCommentDate(DateTime date) => formatShortDate(date);
 
 class CommentsFeature extends StatefulWidget {
   const CommentsFeature({super.key, required this.context});

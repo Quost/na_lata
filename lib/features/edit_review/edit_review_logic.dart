@@ -1,4 +1,5 @@
 import '../../core/models.dart';
+import '../../core/ui_format.dart';
 
 /// Avaliação da sessão para o produto, vinda de `mine()`; null se não houver.
 /// Se o repositório devolver mais de uma, usa a mais recente.
@@ -20,9 +21,5 @@ bool hasChanges(
   required String comment,
 }) => rating != original.rating || comment.trim() != original.comment.trim();
 
-/// Data curta em pt-BR, sem depender de pacote de internacionalização.
-String formatReviewDate(DateTime date) {
-  final local = date.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(local.day)}/${two(local.month)}/${local.year}';
-}
+/// Data curta em pt-BR (delegada ao util compartilhado).
+String formatReviewDate(DateTime date) => formatShortDate(date);
