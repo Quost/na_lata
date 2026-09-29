@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
-import '../../core/contracts.dart';
 import '../../core/models.dart';
-import '../../data/clients/app_failure.dart';
+import '../../core/ui_format.dart';
 import '../../design_system/na_lata_ui.dart';
 
 class FavoritesFeature extends StatefulWidget {
@@ -83,12 +82,6 @@ class _FavoritesFeatureState extends State<FavoritesFeature> {
     }
   }
 
-  String _message(Object error) {
-    if (error is AppFailure) return error.message;
-    if (error is FeaturePending) return error.toString();
-    return 'Não foi possível acessar os favoritos. Tente novamente.';
-  }
-
   @override
   Widget build(BuildContext context) {
     final product = widget.context.product;
@@ -112,7 +105,14 @@ class _FavoritesFeatureState extends State<FavoritesFeature> {
               if (_loading || _saving) const LinearProgressIndicator(),
               if (_error != null) ...[
                 const SizedBox(height: NaSpace.sm),
-                NaError(message: _message(_error!), onRetry: _loadFavorites),
+                NaError(
+                  message: messageForError(
+                    _error!,
+                    fallback:
+                        'Não foi possível acessar os favoritos. Tente novamente.',
+                  ),
+                  onRetry: _loadFavorites,
+                ),
               ],
             ],
           ),
@@ -122,7 +122,13 @@ class _FavoritesFeatureState extends State<FavoritesFeature> {
 
     if (_loading) return const NaLoading(label: 'Carregando favoritos…');
     if (_error != null) {
-      return NaError(message: _message(_error!), onRetry: _loadFavorites);
+      return NaError(
+        message: messageForError(
+          _error!,
+          fallback: 'Não foi possível acessar os favoritos. Tente novamente.',
+        ),
+        onRetry: _loadFavorites,
+      );
     }
     if (_favoriteProducts.isEmpty && _favoriteBarcodes.isNotEmpty) {
       return NaError(
