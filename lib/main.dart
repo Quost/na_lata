@@ -9,9 +9,11 @@ import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
 import 'data/clients/backend_client.dart';
+import 'features/appearance/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await themeController.load();
   try {
     final config = AppConfig.fromEnvironment();
     config.validate();
