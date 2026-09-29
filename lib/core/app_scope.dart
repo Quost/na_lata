@@ -36,30 +36,3 @@ class FeatureContext {
   final Product? product;
   final void Function(Product) openProduct;
 }
-
-class FeaturePlaceholder extends StatelessWidget {
-  const FeaturePlaceholder({
-    super.key,
-    required this.task,
-    required this.title,
-  });
-  final String task, title;
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.construction_outlined),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '$title\nEntrega $task — implemente este módulo',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
