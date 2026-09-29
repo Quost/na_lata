@@ -13,4 +13,4 @@ Aparelho físico/câmera não foram testados: scanner é entrega T03 dos alunos.
 
 ## Atualização: base visual e clientes
 
-Design system com galeria no app, componentes com testes de interação e layout a 320px/200%. Clientes Supabase e HTTP injetáveis com testes sem rede real de resultado, sessão ausente, permissão, conflito, validação, timeout e resposta inválida. O Supabase hospedado continua dependendo da configuração do projeto da aula.
+Design system com galeria de componentes (referência de código), componentes com testes de interação e layout a 320px/200%. Clientes Supabase e HTTP injetáveis com testes sem rede real de resultado, sessão ausente, permissão, conflito, validação, timeout e resposta inválida. O Supabase hospedado continua dependendo da configuração do projeto da aula.
