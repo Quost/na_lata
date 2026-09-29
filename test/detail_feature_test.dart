@@ -4,10 +4,12 @@ import 'package:na_lata/core/app_scope.dart';
 import 'package:na_lata/core/models.dart';
 import 'package:na_lata/data/demo_repositories.dart';
 import 'package:na_lata/data/open_food_facts_repository.dart';
+import 'package:na_lata/design_system/na_lata_ui.dart';
 import 'package:na_lata/features/detail/detail_feature.dart';
 
 /// Helper para montar o widget de teste com Material e tema.
 Widget _harness(FeatureContext ctx) => MaterialApp(
+  theme: NaTheme.light,
   home: Scaffold(
     body: SingleChildScrollView(child: DetailFeature(context: ctx)),
   ),
@@ -45,9 +47,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Suco de laranja'), findsOneWidget);
-      expect(find.text('Sucolândia'), findsOneWidget);
-      expect(find.text('Sucos'), findsOneWidget);
-      expect(find.text('7891234567890'), findsOneWidget);
+      expect(find.text('Marca: Sucolândia'), findsOneWidget);
+      expect(find.text('Categoria: Sucos'), findsOneWidget);
+      expect(find.text('Código: 7891234567890'), findsOneWidget);
 
       scope.dispose();
     });
@@ -68,7 +70,7 @@ void main() {
       await tester.pumpWidget(_harness(ctx));
       await tester.pumpAndSettle();
 
-      expect(find.text('Marca não informada'), findsOneWidget);
+      expect(find.text('Marca: Marca não informada'), findsOneWidget);
 
       scope.dispose();
     });
@@ -88,7 +90,7 @@ void main() {
       await tester.pumpWidget(_harness(ctx));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sem categoria'), findsOneWidget);
+      expect(find.text('Categoria: Sem categoria'), findsOneWidget);
 
       scope.dispose();
     });
@@ -172,14 +174,63 @@ void main() {
       await tester.pumpWidget(_harness(ctx));
       await tester.pumpAndSettle();
 
+      expect(find.text('Nenhum produto selecionado'), findsOneWidget);
       expect(
-        find.text(
-          'Nenhum produto selecionado.\n'
-          'Abra um produto pelo catálogo para ver a ficha.',
-        ),
+        find.text('Abra um produto pelo catálogo para ver a ficha.'),
         findsOneWidget,
       );
       expect(find.byIcon(Icons.info_outline), findsOneWidget);
+
+      scope.dispose();
+    });
+
+    testWidgets('exibe placeholder de imagem se rede falhar', (tester) async {
+      final scope = _scope();
+      final product = const Product(
+        barcode: 'demo-img-error',
+        name: 'Erro de imagem',
+        imageUrl: 'https://site-invalido.com/img.png', // Falha na rede do teste
+      );
+      final ctx = FeatureContext(
+        scope: scope,
+        product: product,
+        openProduct: (_) {},
+      );
+      await tester.pumpWidget(_harness(ctx));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Imagem indisponível'), findsOneWidget);
+      expect(find.byIcon(Icons.image_not_supported_outlined), findsOneWidget);
+
+      scope.dispose();
+    });
+
+    testWidgets('ficha cabe em 320px com texto ampliado', (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      final scope = _scope();
+      final product = const Product(
+        barcode: '123',
+        name: 'Nome muito grande',
+        brand:
+            'Marca super longa que poderia quebrar o layout se usasse Row comum',
+        category: 'Categoria extensa',
+      );
+      final ctx = FeatureContext(
+        scope: scope,
+        product: product,
+        openProduct: (_) {},
+      );
+
+      await tester.pumpWidget(_harness(ctx));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull); // Garante que não houve overflow
 
       scope.dispose();
     });

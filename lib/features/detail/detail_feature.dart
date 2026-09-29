@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/models.dart';
+import '../../design_system/na_lata_ui.dart';
 
 /// T06 — Ficha completa do produto.
 ///
@@ -15,41 +16,20 @@ class DetailFeature extends StatelessWidget {
   Widget build(BuildContext buildContext) {
     final product = context.product;
     if (product == null) {
-      return const _EmptyState();
+      return const NaEmpty(
+        title: 'Nenhum produto selecionado',
+        message: 'Abra um produto pelo catálogo para ver a ficha.',
+        icon: Icons.info_outline,
+      );
     }
-    return _ProductCard(product: product, isDemo: context.scope.isDemo);
+    return _ProductCard(product: product);
   }
-}
-
-/// Orientação exibida quando nenhum produto foi selecionado.
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Nenhum produto selecionado.\n'
-              'Abra um produto pelo catálogo para ver a ficha.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 /// Ficha visual do produto com imagem, nome, marca, categoria e barcode.
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, required this.isDemo});
+  const _ProductCard({required this.product});
   final Product product;
-  final bool isDemo;
 
   @override
   Widget build(BuildContext context) {
@@ -64,17 +44,17 @@ class _ProductCard extends StatelessWidget {
           _ProductImage(imageUrl: product.imageUrl),
 
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(NaSpace.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // --- Badge demo ---
                 if (product.isDemo)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: NaSpace.sm),
                     child: Chip(
-                      avatar: const Icon(Icons.science_outlined, size: 16),
-                      label: const Text('DEMONSTRAÇÃO'),
+                      avatar: Icon(Icons.science_outlined, size: 16),
+                      label: Text('DEMONSTRAÇÃO'),
                       visualDensity: VisualDensity.compact,
                     ),
                   ),
@@ -82,7 +62,7 @@ class _ProductCard extends StatelessWidget {
                 // --- Nome ---
                 Text(product.name, style: theme.textTheme.headlineSmall),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: NaSpace.md),
 
                 // --- Marca ---
                 _InfoRow(
@@ -91,7 +71,7 @@ class _ProductCard extends StatelessWidget {
                   value: product.brand ?? 'Marca não informada',
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: NaSpace.sm),
 
                 // --- Categoria ---
                 _InfoRow(
@@ -100,7 +80,7 @@ class _ProductCard extends StatelessWidget {
                   value: product.category ?? 'Sem categoria',
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: NaSpace.sm),
 
                 // --- Barcode ---
                 _InfoRow(
@@ -146,7 +126,7 @@ class _ProductImage extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.image_not_supported_outlined, size: 48),
-          SizedBox(height: 8),
+          SizedBox(height: NaSpace.sm),
           Text('Imagem indisponível'),
         ],
       ),
@@ -167,16 +147,25 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Icon(icon, size: 18, color: Theme.of(context).colorScheme.outline),
-      const SizedBox(width: 8),
-      Text(
-        '$label: ',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.outline,
+      const SizedBox(width: NaSpace.sm),
+      Expanded(
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '$label: ',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              TextSpan(text: value),
+            ],
+          ),
         ),
       ),
-      Expanded(child: Text(value)),
     ],
   );
 }
