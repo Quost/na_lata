@@ -120,6 +120,9 @@ class DemoCommunity implements CommunityRepository {
   Future<void> addSighting(Sighting sighting) async =>
       throw const FeaturePending('T22 — onde encontrei');
   @override
-  Future<void> setNickname(String nickname) async =>
-      throw const FeaturePending('T23 — apelido');
+  Future<void> setNickname(String nickname) async {
+    final value = nickname.trim();
+
+    // T23 — apelido
+  }
 }
