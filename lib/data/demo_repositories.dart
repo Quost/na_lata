@@ -1,5 +1,8 @@
 import '../core/contracts.dart';
 import '../core/models.dart';
+import '../features/report/report_logic.dart';
+import '../features/sightings/sighting_logic.dart';
+import 'clients/app_failure.dart';
 import 'supabase_reviews.dart' show validateReviewDraft;
 
 const demoProducts = [
@@ -129,9 +132,20 @@ class DemoReviews implements ReviewRepository {
     }
   }
 
+  /// T17 — exclusão: remove só a avaliação própria; 0 linhas não é sucesso.
   @override
-  Future<void> delete(String reviewId) async =>
-      throw const FeaturePending('T17 — excluir avaliação');
+  Future<void> delete(String reviewId) async {
+    final index = _items.indexWhere(
+      (r) => r.id == reviewId && r.userId == userId,
+    );
+    if (index < 0) {
+      throw const AppFailure(
+        FailureKind.unavailable,
+        'Avaliação não encontrada.',
+      );
+    }
+    _items.removeAt(index);
+  }
 }
 
 class DemoCommunity implements CommunityRepository {
@@ -139,6 +153,16 @@ class DemoCommunity implements CommunityRepository {
     : _favorites = {...initialFavorites};
 
   final Set<String> _favorites;
+
+  /// T19 — modo demo tem um único usuário; uma denúncia por comentário.
+  final Set<String> _reportedReviews = {};
+
+  /// T22 — relatos em memória, por código de barras.
+  final List<Sighting> _sightings = [];
+
+  /// T23 — apelido escolhido nesta sessão demo (só para feedback local).
+  String? _nickname;
+  String? get nickname => _nickname;
 
   @override
   Future<Set<String>> favorites() async => {..._favorites};
@@ -152,14 +176,35 @@ class DemoCommunity implements CommunityRepository {
   }
 
   @override
-  Future<void> report(String reviewId, String reason) async =>
-      throw const FeaturePending('T19 — denúncias');
+  Future<void> report(String reviewId, String reason) async {
+    if (ReportReason.tryParse(reason) == null || reviewId.trim().isEmpty) {
+      throw const AppFailure(
+        FailureKind.validation,
+        'Escolha um motivo: ofensa, spam ou outro.',
+      );
+    }
+    // add() devolve false quando o comentário já foi denunciado.
+    if (!_reportedReviews.add(reviewId)) {
+      throw const AppFailure(FailureKind.conflict, duplicateReportMessage);
+    }
+  }
+
   @override
-  Future<List<Sighting>> sightings(String barcode) async => [];
+  Future<List<Sighting>> sightings(String barcode) async =>
+      _sightings.where((s) => s.barcode == barcode.trim()).toList();
+
   @override
-  Future<void> addSighting(Sighting sighting) async =>
-      throw const FeaturePending('T22 — onde encontrei');
+  Future<void> addSighting(Sighting sighting) async {
+    final valid = validateSighting(sighting);
+    _sightings.insert(0, valid);
+  }
+
   @override
-  Future<void> setNickname(String nickname) async =>
-      throw const FeaturePending('T23 — apelido');
+  Future<void> setNickname(String nickname) async {
+    final value = nickname.trim();
+    if (value.isEmpty) {
+      throw const AppFailure(FailureKind.validation, 'Digite um apelido.');
+    }
+    _nickname = value;
+  }
 }
