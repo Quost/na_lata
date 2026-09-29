@@ -3,7 +3,7 @@ import 'package:na_lata/features/nickname/nickname_feature.dart';
 
 void main() {
   test('vazio e só espaços → empty', () {
-    expect(validateNickname('')?.error, NicknameError.empty);
+    expect(validateNickname('').error, NicknameError.empty);
     expect(validateNickname('   ').error, NicknameError.empty);
     expect(validateNickname(null).error, NicknameError.empty);
   });
