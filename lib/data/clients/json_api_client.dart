@@ -15,7 +15,12 @@ class JsonApiClient {
   final http.Client _transport;
   final Duration timeout;
 
-  Future<Map<String, dynamic>> getObject(Uri uri) async {
+  /// [acceptStatus] lista códigos HTTP de erro cujo corpo JSON tem significado
+  /// para o chamador (ex.: 404 do OFF com status 0). 429 nunca é aceito.
+  Future<Map<String, dynamic>> getObject(
+    Uri uri, {
+    Set<int> acceptStatus = const {},
+  }) async {
     try {
       final response = await _transport
           .get(
@@ -33,7 +38,8 @@ class JsonApiClient {
           'Muitas consultas. Aguarde antes de tentar novamente.',
         );
       }
-      if (response.statusCode < 200 || response.statusCode >= 300) {
+      final success = response.statusCode >= 200 && response.statusCode < 300;
+      if (!success && !acceptStatus.contains(response.statusCode)) {
         throw const AppFailure(
           FailureKind.unavailable,
           'O serviço de produtos não respondeu como esperado.',

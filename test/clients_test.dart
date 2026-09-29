@@ -102,6 +102,34 @@ void main() {
       'status': 0,
     });
   });
+  test('HTTP devolve corpo somente de status de erro aceito', () async {
+    final api = JsonApiClient(
+      transport: MockClient((_) async => http.Response('{"status":0}', 404)),
+    );
+    addTearDown(api.close);
+    final uri = Uri.https('example.org', '/product');
+    expect(await api.getObject(uri, acceptStatus: {404}), {'status': 0});
+    await expectLater(
+      api.getObject(uri),
+      throwsA(failure(FailureKind.unavailable)),
+    );
+    final html = JsonApiClient(
+      transport: MockClient((_) async => http.Response('<html>', 404)),
+    );
+    addTearDown(html.close);
+    await expectLater(
+      html.getObject(uri, acceptStatus: {404}),
+      throwsA(failure(FailureKind.invalidResponse)),
+    );
+    final limited = JsonApiClient(
+      transport: MockClient((_) async => http.Response('{"status":0}', 429)),
+    );
+    addTearDown(limited.close);
+    await expectLater(
+      limited.getObject(uri, acceptStatus: {429}),
+      throwsA(failure(FailureKind.unavailable)),
+    );
+  });
   test('HTTP rejeita JSON inválido e não repete 429', () async {
     var calls = 0;
     final api = JsonApiClient(

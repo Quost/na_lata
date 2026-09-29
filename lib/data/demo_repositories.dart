@@ -1,5 +1,6 @@
 import '../core/contracts.dart';
 import '../core/models.dart';
+import 'supabase_reviews.dart' show validateReviewDraft;
 
 const demoProducts = [
   Product(
@@ -71,6 +72,10 @@ class DemoProducts implements ProductRepository {
 }
 
 class DemoReviews implements ReviewRepository {
+  /// Usuário da sessão fictícia; o formulário nunca informa o autor.
+  static const userId = 'demo-user';
+  static const nickname = 'Você (demo)';
+  var _nextId = 3;
   final _items = [
     Review(
       id: 'demo-review-1',
@@ -84,33 +89,68 @@ class DemoReviews implements ReviewRepository {
     Review(
       id: 'demo-review-2',
       barcode: 'demo-chocolate-1',
-      userId: 'demo-user',
-      nickname: 'Você (demo)',
+      userId: userId,
+      nickname: nickname,
       rating: 2,
       comment: 'Achei muito doce.',
       createdAt: DateTime.utc(2026, 9, 28),
     ),
   ];
+  List<Review> _newestFirst(Iterable<Review> reviews) =>
+      reviews.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   @override
   Future<List<Review>> forProduct(String barcode) async =>
-      _items.where((r) => r.barcode == barcode).toList();
+      _newestFirst(_items.where((r) => r.barcode == barcode.trim()));
   @override
   Future<List<Review>> mine() async =>
-      _items.where((r) => r.userId == 'demo-user').toList();
+      _newestFirst(_items.where((r) => r.userId == userId));
+
+  /// Mesmo contrato do banco: upsert por (barcode, user_id), mantendo id e data.
   @override
-  Future<void> save(ReviewDraft draft) async =>
-      throw const FeaturePending('T08 — persistir avaliações');
+  Future<void> save(ReviewDraft draft) async {
+    final valid = validateReviewDraft(draft);
+    final index = _items.indexWhere(
+      (r) => r.barcode == valid.barcode && r.userId == userId,
+    );
+    final previous = index >= 0 ? _items[index] : null;
+    final review = Review(
+      id: previous?.id ?? 'demo-review-${_nextId++}',
+      barcode: valid.barcode,
+      userId: userId,
+      nickname: nickname,
+      rating: valid.rating,
+      comment: valid.comment,
+      createdAt: previous?.createdAt ?? DateTime.now().toUtc(),
+    );
+    if (index >= 0) {
+      _items[index] = review;
+    } else {
+      _items.add(review);
+    }
+  }
+
   @override
   Future<void> delete(String reviewId) async =>
       throw const FeaturePending('T17 — excluir avaliação');
 }
 
 class DemoCommunity implements CommunityRepository {
+  DemoCommunity({Set<String> initialFavorites = const {}})
+    : _favorites = {...initialFavorites};
+
+  final Set<String> _favorites;
+
   @override
-  Future<Set<String>> favorites() async => {};
+  Future<Set<String>> favorites() async => {..._favorites};
   @override
-  Future<void> setFavorite(String barcode, bool value) async =>
-      throw const FeaturePending('T18 — favoritos');
+  Future<void> setFavorite(String barcode, bool value) async {
+    if (value) {
+      _favorites.add(barcode);
+    } else {
+      _favorites.remove(barcode);
+    }
+  }
+
   @override
   Future<void> report(String reviewId, String reason) async =>
       throw const FeaturePending('T19 — denúncias');
