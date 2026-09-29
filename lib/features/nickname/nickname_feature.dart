@@ -32,10 +32,12 @@ NicknameValidation validateNickname(String? raw) {
 }
 
 String nicknameErrorMessage(NicknameError error) => switch (error) {
-      NicknameError.empty => 'Digite um apelido.',
-      NicknameError.tooShort => 'O apelido precisa ter pelo menos $kNicknameMin caracteres.',
-      NicknameError.tooLong => 'O apelido pode ter no máximo $kNicknameMax caracteres.',
-    };
+  NicknameError.empty => 'Digite um apelido.',
+  NicknameError.tooShort =>
+    'O apelido precisa ter pelo menos $kNicknameMin caracteres.',
+  NicknameError.tooLong =>
+    'O apelido pode ter no máximo $kNicknameMax caracteres.',
+};
 
 class NicknameFeature extends StatefulWidget {
   const NicknameFeature({super.key, required this.context});
@@ -51,14 +53,12 @@ class _NicknameFeatureState extends State<NicknameFeature> {
   String? _error;
   String? _success;
 
- @override
-void initState() {
-  super.initState();
+  @override
+  void initState() {
+    super.initState();
 
-  _controller = TextEditingController(
-    text: widget.context.scope.userId,
-  );
-}
+    _controller = TextEditingController(text: widget.context.scope.userId);
+  }
 
   @override
   void dispose() {
@@ -125,8 +125,10 @@ void initState() {
             onPressed: _saving ? null : _save,
             child: _saving
                 ? const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Text('Salvar apelido'),
           ),
           if (_success != null) ...[
