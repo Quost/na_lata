@@ -135,11 +135,22 @@ class DemoReviews implements ReviewRepository {
 }
 
 class DemoCommunity implements CommunityRepository {
+  DemoCommunity({Set<String> initialFavorites = const {}})
+    : _favorites = {...initialFavorites};
+
+  final Set<String> _favorites;
+
   @override
-  Future<Set<String>> favorites() async => {};
+  Future<Set<String>> favorites() async => {..._favorites};
   @override
-  Future<void> setFavorite(String barcode, bool value) async =>
-      throw const FeaturePending('T18 — favoritos');
+  Future<void> setFavorite(String barcode, bool value) async {
+    if (value) {
+      _favorites.add(barcode);
+    } else {
+      _favorites.remove(barcode);
+    }
+  }
+
   @override
   Future<void> report(String reviewId, String reason) async =>
       throw const FeaturePending('T19 — denúncias');
