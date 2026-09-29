@@ -62,8 +62,8 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 8),
           Text(
             widget.scope.isDemo
-                ? 'Dados fictícios para desenvolver. As entregas da turma começam nos módulos abaixo.'
-                : 'Avaliações da turma. Funcionalidades em construção.',
+                ? 'Você está no modo demonstração, com produtos de exemplo para explorar o app.'
+                : 'Avaliações de alimentos feitas pela comunidade.',
           ),
           const SizedBox(height: 16),
           if (tab == 0) ...[
