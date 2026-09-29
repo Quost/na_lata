@@ -97,4 +97,100 @@ abstract final class NaTheme {
       ),
     );
   }
+
+  /// Espelha [light], mas com superfícies escuras derivadas do próprio
+  /// ColorScheme escuro. Não fixa NaColors.cream/ink: cores de texto e fundo
+  /// saem de `scheme.onSurface`/`scheme.surface*`, que o Material 3 garante com
+  /// contraste adequado (>= 4,5:1) para o tema escuro.
+  static ThemeData get dark {
+    final scheme = ColorScheme.fromSeed(
+      seedColor: NaColors.green,
+      brightness: Brightness.dark,
+    );
+    final base = ThemeData(useMaterial3: true, colorScheme: scheme);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(NaRadius.control),
+    );
+    return base.copyWith(
+      scaffoldBackgroundColor: scheme.surface,
+      textTheme: base.textTheme.copyWith(
+        headlineMedium: TextStyle(
+          fontSize: 28,
+          height: 1.2,
+          fontWeight: FontWeight.w800,
+          color: scheme.onSurface,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 22,
+          height: 1.3,
+          fontWeight: FontWeight.w700,
+          color: scheme.onSurface,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          height: 1.4,
+          fontWeight: FontWeight.w700,
+          color: scheme.onSurface,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          height: 1.5,
+          color: scheme.onSurface,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: scheme.onSurface,
+        ),
+        labelLarge: const TextStyle(
+          fontSize: 14,
+          height: 1.3,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        centerTitle: false,
+      ),
+      cardTheme: CardThemeData(
+        color: scheme.surfaceContainerHigh,
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: NaSpace.md),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NaRadius.card),
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(NaSize.touch, NaSize.touch),
+          shape: shape,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(NaSize.touch, NaSize.touch),
+          shape: shape,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(NaSize.touch, NaSize.touch),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainerHighest,
+        contentPadding: const EdgeInsets.all(NaSpace.lg),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(NaRadius.control),
+        ),
+      ),
+      dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 }
