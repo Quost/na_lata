@@ -65,8 +65,8 @@ void main() {
           find.byWidgetPredicate(
             (widget) =>
                 widget is SelectableText &&
-              widget.data ==
-                'A embalagem é uma ***, mas o produto é ótimo.',
+                widget.data ==
+                    'A embalagem é uma ***, mas o produto é ótimo.',
           ),
           findsOneWidget,
         );
