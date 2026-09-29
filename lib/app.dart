@@ -42,15 +42,6 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Na Lata'),
         actions: [
-          IconButton(
-            tooltip: 'Design system',
-            icon: const Icon(Icons.palette_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const DesignSystemGallery(),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Chip(
@@ -112,6 +103,7 @@ class _HomePageState extends State<HomePage> {
             ),
             features[3].$3(featureContext),
             features[2].$3(featureContext),
+            features[1].$3(featureContext),
           ],
           if (tab == 1) ...[
             features[12].$3(featureContext),
@@ -125,36 +117,6 @@ class _HomePageState extends State<HomePage> {
             features[17].$3(featureContext),
             features[23].$3(featureContext),
           ],
-          if (tab == 3)
-            ...features.map(
-              (f) => Card(
-                child: ListTile(
-                  title: Text('${f.$1} · ${f.$2}'),
-                  subtitle: const Text('Abrir módulo de desenvolvimento'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => Scaffold(
-                        appBar: AppBar(title: Text(f.$1)),
-                        body: AnimatedBuilder(
-                          animation: widget.scope,
-                          builder: (context, _) => SingleChildScrollView(
-                            padding: NaSpace.page,
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Módulos de produto devem ser abertos pela ficha no Catálogo.',
-                                ),
-                                f.$3(featureContext),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -173,7 +135,6 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.person_outline),
             label: 'Meu canto',
           ),
-          NavigationDestination(icon: Icon(Icons.code), label: 'Oficina'),
         ],
       ),
     ),
