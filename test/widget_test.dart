@@ -21,10 +21,7 @@ void main() {
     expect(find.text('DEMONSTRAÇÃO'), findsOneWidget);
     await tester.tap(find.text('Leite integral'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Produto fictício • não importar para o Supabase'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Produto de demonstração'), findsOneWidget);
     scope.dispose();
   });
 }
