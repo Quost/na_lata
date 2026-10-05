@@ -1,4 +1,5 @@
 name: Flutter
+# A pipeline deve falhar cedo quando uma entrega não é rastreável.
 on:
   pull_request:
     branches: [main]
