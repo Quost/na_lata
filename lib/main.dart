@@ -10,10 +10,13 @@ import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
 import 'data/clients/backend_client.dart';
 import 'features/appearance/theme_controller.dart';
+import 'features/onboarding/onboarding_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await themeController.load();
+  final onboarding = OnboardingController();
+  await onboarding.load();
   try {
     final config = AppConfig.fromEnvironment();
     config.validate();
@@ -33,6 +36,7 @@ Future<void> main() async {
     }
     runApp(
       NaLataApp(
+        onboarding: onboarding,
         scope: AppScope(
           products: demo ? DemoProducts() : SupabaseProducts(client!),
           reviews: demo ? DemoReviews() : SupabaseReviews(client!),

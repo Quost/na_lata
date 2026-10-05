@@ -3,11 +3,16 @@ import 'core/app_scope.dart';
 import 'core/models.dart';
 import 'feature_registry.dart';
 import 'features/appearance/theme_controller.dart';
+import 'features/onboarding/onboarding_controller.dart';
+import 'features/onboarding/onboarding_page.dart';
 import 'design_system/na_lata_ui.dart';
 
 class NaLataApp extends StatelessWidget {
-  const NaLataApp({super.key, required this.scope});
+  const NaLataApp({super.key, required this.scope, this.onboarding});
   final AppScope scope;
+
+  /// Primeiro uso. Sem controller (testes, demos) o app abre direto na home.
+  final OnboardingController? onboarding;
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
     valueListenable: themeController,
@@ -17,14 +22,22 @@ class NaLataApp extends StatelessWidget {
       theme: NaTheme.light,
       darkTheme: NaTheme.dark,
       themeMode: mode,
-      home: HomePage(scope: scope),
+      home: onboarding == null
+          ? HomePage(scope: scope)
+          : ListenableBuilder(
+              listenable: onboarding!,
+              builder: (context, _) => onboarding!.shouldShow
+                  ? OnboardingPage(controller: onboarding!)
+                  : HomePage(scope: scope, onboarding: onboarding),
+            ),
     ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.scope});
+  const HomePage({super.key, required this.scope, this.onboarding});
   final AppScope scope;
+  final OnboardingController? onboarding;
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -36,6 +49,18 @@ class _HomePageState extends State<HomePage> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ProductPage(scope: widget.scope, product: p),
+      ),
+    );
+  }
+
+  /// Reabre o primeiro uso voluntariamente; concluir ou pular volta à home.
+  void _openOnboarding() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => OnboardingPage(
+          controller: widget.onboarding!,
+          onFinished: () => Navigator.of(routeContext).pop(),
+        ),
       ),
     );
   }
@@ -96,6 +121,12 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Na Lata'),
         actions: [
+          if (widget.onboarding != null)
+            IconButton(
+              tooltip: 'Ajuda: rever a apresentação',
+              icon: const Icon(Icons.help_outline),
+              onPressed: _openOnboarding,
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: NaSpace.md),
             child: Chip(
