@@ -1,0 +1,1309 @@
+[
+  {
+    "owner": "gabrielblankk",
+    "code": "CAT01",
+    "cycle": 1,
+    "title": "Registrar origem e data dos dados importados",
+    "goal": "Saber de onde veio a ficha e quando ela foi consultada.",
+    "scope": "Ampliar Product e o mapper OFF com source, sourceUrl e sourceFetchedAt; migração aditiva em products; preservar importação idempotente. Exibir crédito e link da fonte na ficha.",
+    "checks": [
+      "Produto antigo continua abrindo com origem não informada; não inventar data histórica.",
+      "Nova importação salva metadados; reimportar não apaga avaliações nem cria produto duplicado.",
+      "Link de origem usa HTTPS e host permitido; atribuição Open Food Facts aparece quando aplicável."
+    ],
+    "tests": "Parsing com campos ausentes; duas importações do mesmo barcode; widget de atribuição e produto legado.",
+    "deps": [],
+    "paths": "lib/core/models.dart; lib/data/open_food_facts_repository.dart; lib/data/supabase_products.dart; lib/features/detail/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "RestosDeTripas"
+  },
+  {
+    "owner": "gabrielblankk",
+    "code": "CAT02",
+    "cycle": 2,
+    "title": "Atualizar ficha externa sem sobrescrever dados da comunidade",
+    "goal": "Corrigir nome, foto e categoria desatualizados de um produto já importado.",
+    "scope": "Criar operação explícita de atualizar dados do OFF com comparação antes/depois e confirmação. Persistência controlada: não liberar UPDATE irrestrito em products; usar função autenticada com campos permitidos, validação e limite de frequência por produto.",
+    "checks": [
+      "Sem mudança externa, operação informa ficha atualizada sem duplicação.",
+      "Avaliações, favoritos e preços permanecem intactos; erro/429 preserva a ficha anterior.",
+      "Somente campos de catálogo podem mudar; consulta só é gravada após confirmação e não é repetida automaticamente."
+    ],
+    "tests": "Mock OFF com alteração/404/429; integração verifica integridade dos vínculos e rejeição de campos não permitidos.",
+    "deps": [
+      "CAT01"
+    ],
+    "paths": "lib/data/; lib/features/detail/; supabase/migrations/",
+    "size": "G",
+    "reviewer": "RestosDeTripas"
+  },
+  {
+    "owner": "gabrielblankk",
+    "code": "CAT03",
+    "cycle": 3,
+    "title": "Importar quantidade e unidade da embalagem",
+    "goal": "Permitir comparar produtos de tamanhos diferentes com informação confiável.",
+    "scope": "Adicionar quantidade positiva e unidade canônica g, kg, ml ou l ao modelo e banco, a partir dos campos estruturados do OFF. Parser puro; texto ambíguo fica desconhecido e não entra em cálculo.",
+    "checks": [
+      "Conversão de massa e volume tem testes; nunca converter massa em volume.",
+      "Valor ausente/zero/inválido não gera preço por unidade fictício.",
+      "Ficha apresenta tamanho e origem do dado sem quebrar produtos antigos."
+    ],
+    "tests": "Fixtures com 500 g, 1 kg, 250 ml, 1 l, campo ausente, múltipla embalagem ambígua e entrada malformada.",
+    "deps": [
+      "CAT01"
+    ],
+    "paths": "lib/data/open_food_facts_repository.dart; lib/core/models.dart; lib/features/detail/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "RestosDeTripas"
+  },
+  {
+    "owner": "gabrielblankk",
+    "code": "CAT04",
+    "cycle": 4,
+    "title": "Exibir qualidade da ficha e encaminhar correção à fonte",
+    "goal": "Ajudar o usuário a reconhecer informação incompleta e corrigi-la na origem.",
+    "scope": "Calcular campos essenciais ausentes; mostrar indicador textual de ficha incompleta e ação para abrir a página de edição no OFF, sem enviar dados do usuário nem editar remotamente pelo app.",
+    "checks": [
+      "Produto sem imagem/marca/quantidade tem indicação específica, não uma nota arbitrária de qualidade.",
+      "Produto manual ou sem URL não recebe link inventado; ação indisponível é explicada.",
+      "Falha ao abrir link é tratada e ficha permanece utilizável."
+    ],
+    "tests": "Regra de completude; widget completo/incompleto; link permitido e falha de abertura.",
+    "deps": [
+      "CAT01",
+      "CAT03"
+    ],
+    "paths": "lib/features/detail/; test/features/detail/",
+    "size": "M",
+    "reviewer": "RestosDeTripas"
+  },
+  {
+    "owner": "RestosDeTripas",
+    "code": "BUS01",
+    "cycle": 1,
+    "title": "Criar contrato tipado da busca de produtos",
+    "goal": "Dar uma linguagem única para os filtros da nova jornada.",
+    "scope": "Criar CatalogQuery, CatalogSort e PageResult/Cursor com texto, barcode exato, brandKey, category, cityId/UF, minRating e janela de observações. Definir serialização versionada e fake paginado sem remover ProductQuery antes da migração dos consumidores.",
+    "checks": [
+      "Filtros ausentes equivalem a Todos; valores inválidos são rejeitados e barcode mantém zeros.",
+      "Combinação é AND; região é local de observação, não cidade do avaliador.",
+      "Cursor é opaco, ligado à consulta; mudar filtro/ordem reinicia paginação."
+    ],
+    "tests": "Round-trip de serialização, valores inválidos, filtros combinados e reset de cursor.",
+    "deps": [],
+    "paths": "lib/core/; lib/data/demo_repositories.dart; test/catalog_query_test.dart",
+    "size": "M",
+    "reviewer": "DAlS1N"
+  },
+  {
+    "owner": "RestosDeTripas",
+    "code": "BUS02",
+    "cycle": 2,
+    "title": "Consultar catálogo com filtros e paginação no Supabase",
+    "goal": "Evitar baixar todos os produtos para filtrar no celular.",
+    "scope": "Implementar consulta parametrizada no banco para CatalogQuery: nome/barcode, marca, categoria, região, nota mínima e ordenação; join por EXISTS nas observações para não duplicar produtos; retornar agregados de notas em lote.",
+    "checks": [
+      "Filtros são aplicados antes do limite; páginas de 20 e limite máximo de 50; ordem estável com barcode como desempate.",
+      "Região usa somente observações datadas da janela selecionada; registros legados sem cityId não entram.",
+      "Texto com acentos e caracteres %/_ tem comportamento literal documentado; parâmetros não são interpolados em SQL.",
+      "Índices e EXPLAIN em fixture com 1000 produtos documentados; acesso respeita RLS e moderação."
+    ],
+    "tests": "SQL com cruzamento de filtros, cidade homônima, mais de uma observação por produto, ausência de nota e páginas sem repetição em conjunto estável.",
+    "deps": [
+      "BUS01",
+      "GEO01",
+      "NOT01",
+      "MOD01"
+    ],
+    "paths": "supabase/migrations/; supabase/tests/; lib/data/",
+    "size": "G",
+    "reviewer": "DAlS1N"
+  },
+  {
+    "owner": "RestosDeTripas",
+    "code": "BUS03",
+    "cycle": 3,
+    "title": "Integrar busca paginada ao repositório Flutter",
+    "goal": "Fazer a tela consumir resultados corretos mesmo com respostas fora de ordem.",
+    "scope": "Implementar CatalogRepository com BackendClient e controller de busca: debounce, geração da requisição, primeira página/próxima página/retry e adapter para consumidores atuais.",
+    "checks": [
+      "Resposta antiga não substitui busca nova; carregar mais não repete itens.",
+      "Erro na próxima página preserva itens existentes e permite tentar novamente.",
+      "Resultados offline/cache nunca são apresentados como consulta online atual."
+    ],
+    "tests": "MockClient responde fora de ordem; timeout na página 2; mudança de cidade durante carregamento; JSON inválido.",
+    "deps": [
+      "BUS02"
+    ],
+    "paths": "lib/data/catalog_repository.dart; lib/features/catalog/; test/catalog_pagination_test.dart",
+    "size": "M",
+    "reviewer": "DAlS1N"
+  },
+  {
+    "owner": "RestosDeTripas",
+    "code": "BUS04",
+    "cycle": 4,
+    "title": "Entregar painel de filtros combinados no catálogo",
+    "goal": "Responder: quais produtos desta marca/categoria foram encontrados na minha cidade?",
+    "scope": "Conectar filtros de marca, categoria, nota e região ao controller paginado; edição em rascunho até Aplicar; Limpar todos; preservar seleção ao voltar de um produto.",
+    "checks": [
+      "Aplicar combina todos os filtros; Cancelar não altera a busca; Limpar remove filtros opcionais.",
+      "Sem resultado mostra critérios ativos e ação de limpar; estado sem observações regionais é explícito.",
+      "Opções de marca/categoria não desaparecem só porque o resultado atual ficou vazio; layout funciona em 320 px e texto 200%."
+    ],
+    "tests": "Widget aplica quatro filtros, cancela, limpa e retorna do detalhe; integração com duas cidades e duas marcas.",
+    "deps": [
+      "BUS03",
+      "GEO02",
+      "UX01"
+    ],
+    "paths": "lib/features/filters/; lib/features/catalog/; lib/app.dart",
+    "size": "G",
+    "reviewer": "DAlS1N"
+  },
+  {
+    "owner": "DAlS1N",
+    "code": "GEO01",
+    "cycle": 1,
+    "title": "Padronizar municípios e UF sem perder registros antigos",
+    "goal": "Eliminar variações como Joinville, joinville e cidades homônimas.",
+    "scope": "Criar catálogo cities com código IBGE como chave, nome e UF, importador idempotente de fonte oficial e CityRepository de leitura. Adicionar cityId opcional nas sightings preservando city textual; backfill apenas para correspondência inequívoca.",
+    "checks": [
+      "Código IBGE identifica município; nome igual em outra UF não é unido.",
+      "Importação repetida não duplica; escrita no catálogo de cidades é restrita ao processo administrativo.",
+      "Sighting antigo permanece visível; não mapear cidade ambígua por aproximação."
+    ],
+    "tests": "Parser com fixture IBGE; importação duas vezes; cidade homônima e legado sem correspondência. Sem internet obrigatória no CI.",
+    "deps": [],
+    "paths": "lib/features/region/; lib/data/city_repository.dart; supabase/migrations/; tool/import_cities.*",
+    "size": "G",
+    "reviewer": "aamandabraun"
+  },
+  {
+    "owner": "DAlS1N",
+    "code": "GEO02",
+    "cycle": 2,
+    "title": "Selecionar região por cidade e UF no app",
+    "goal": "Permitir descoberta regional sem obrigar permissão de GPS.",
+    "scope": "Criar seletor com pesquisa de município e UF, opção Todas as regiões e preferência local por sessão/conta. Usar IDs do CityRepository e informar que a escolha é de busca, não publicação do endereço do usuário.",
+    "checks": [
+      "Alterar UF limpa cidade incompatível; homônimos mostram UF.",
+      "Seleção persiste após reiniciar e pode ser apagada; modo Todas não aplica filtro regional.",
+      "Falha de rede usa catálogo local disponível identificado, sem inventar municípios."
+    ],
+    "tests": "Widget homônimos, UF alterada, limpar, persistência e erro; fluxo sem permissão de localização.",
+    "deps": [
+      "GEO01"
+    ],
+    "paths": "lib/features/region/; lib/core/app_scope.dart; test/region_selector_test.dart",
+    "size": "M",
+    "reviewer": "aamandabraun"
+  },
+  {
+    "owner": "DAlS1N",
+    "code": "GEO03",
+    "cycle": 3,
+    "title": "Evoluir onde encontrei para observação regional datada",
+    "goal": "Dar contexto de local e tempo a cada relato de disponibilidade.",
+    "scope": "Ampliar Sighting com id, cityId, observedAt e autor; formulário exige cidade canônica e loja, permite corrigir/excluir relato próprio e diferencia horário do relato do horário da gravação.",
+    "checks": [
+      "Data futura e loja vazia são recusadas no app e banco; createdAt do servidor permanece imutável.",
+      "Outro usuário não pode alterar/apagar relato; zero linhas não é sucesso.",
+      "Leitura mostra cidade/UF/data e aviso de disponibilidade relatada, sem garantir estoque."
+    ],
+    "tests": "Validação de data e loja; edição/exclusão próprias; teste RLS A/B; legado sem cidade normalizada.",
+    "deps": [
+      "GEO01",
+      "GEO02"
+    ],
+    "paths": "lib/features/sightings/; lib/data/supabase_community.dart; lib/core/models.dart; supabase/migrations/",
+    "size": "G",
+    "reviewer": "aamandabraun"
+  },
+  {
+    "owner": "DAlS1N",
+    "code": "GEO04",
+    "cycle": 4,
+    "title": "Mostrar onde encontrar o produto na região selecionada",
+    "goal": "Transformar relatos em uma resposta útil de onde procurar.",
+    "scope": "Criar consulta e componente na ficha por cityId/UF e janela 7/30/90 dias, agrupando loja e última observação sem duplicar; paginação e botão para registrar novo relato.",
+    "checks": [
+      "Mais recente primeiro, com data e número de relatos distintos; rótulo não promete estoque.",
+      "Vazio regional oferece ampliar região/janela sem alterar silenciosamente a escolha.",
+      "Registros antigos sem cidade canônica são visíveis separadamente e não contaminam a busca regional."
+    ],
+    "tests": "SQL agrupamento e janela temporal; widget vazio, mais de uma loja e troca de região.",
+    "deps": [
+      "GEO03"
+    ],
+    "paths": "lib/features/sightings/; lib/data/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "aamandabraun"
+  },
+  {
+    "owner": "aamandabraun",
+    "code": "NOT01",
+    "cycle": 1,
+    "title": "Calcular notas em lote no banco sem N+1",
+    "goal": "Dar suporte à busca e rankings quando o catálogo crescer.",
+    "scope": "Criar agregação consultável de média, quantidade e histograma por barcode; manter summarizeReviews como referência pura. Definir contrato RatingStats e testes com distribuição conhecida; preparar exclusão de conteúdo moderado em MOD01.",
+    "checks": [
+      "Sem avaliações retorna média null e quantidade 0; não arredondar antes de ordenar.",
+      "Cada review conta uma vez; exclusão/edição atualiza resultado.",
+      "Lote de produtos não dispara uma requisição por produto e função/view mantém o acesso previsto."
+    ],
+    "tests": "SQL contra resultado do helper Dart, produto vazio, edição, exclusão e lote; integração com estado de moderação assim que MOD01 integrar.",
+    "deps": [],
+    "paths": "lib/features/summary/; lib/data/rating_repository.dart; supabase/migrations/; supabase/tests/",
+    "size": "G",
+    "reviewer": "vectr444"
+  },
+  {
+    "owner": "aamandabraun",
+    "code": "NOT02",
+    "cycle": 2,
+    "title": "Consultar reputação da marca com média ponderada",
+    "goal": "Evitar uma marca parecer melhor por ter muitos produtos com uma única nota.",
+    "scope": "Criar endpoint/consulta paginada por brandKey e contrato BrandStats; usar total de pontos dividido pelo total de reviews elegíveis, com número de produtos avaliados e avaliações.",
+    "checks": [
+      "Exemplo com 1 review nota 5 e 9 reviews nota 1 resulta em 1,4, não 3.",
+      "Marca vazia é tratada como não informada e não aparece como marca real.",
+      "Sem notas retorna Sem avaliações; dados moderados não contribuem."
+    ],
+    "tests": "SQL média ponderada, produtos repetidos no join, marca vazia e paginação; mapper Dart.",
+    "deps": [
+      "NOT01",
+      "MOD01"
+    ],
+    "paths": "lib/data/rating_repository.dart; supabase/migrations/; test/brand_stats_test.dart",
+    "size": "M",
+    "reviewer": "vectr444"
+  },
+  {
+    "owner": "aamandabraun",
+    "code": "NOT03",
+    "cycle": 3,
+    "title": "Criar ranking por categoria e disponibilidade regional",
+    "goal": "Descobrir produtos bem avaliados que foram relatados na região.",
+    "scope": "Evoluir ranking para filtrar categoria e observações recentes na cidade. Notas continuam sendo de toda a comunidade; região limita disponibilidade, não origem das notas. Reutilizar consultas agregadas.",
+    "checks": [
+      "Ordenar média decrescente, quantidade decrescente e nome/barcode estáveis.",
+      "Múltiplas sightings não multiplicam notas; produtos sem review não entram.",
+      "Tela explica Notas da comunidade e Encontrados na região; altera região sem lista residual."
+    ],
+    "tests": "Fixture duas regiões, múltiplos relatos e empate; widget categoria/região/vazio.",
+    "deps": [
+      "NOT01",
+      "BUS02",
+      "GEO02"
+    ],
+    "paths": "lib/features/ranking/; lib/data/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "vectr444"
+  },
+  {
+    "owner": "aamandabraun",
+    "code": "NOT04",
+    "cycle": 4,
+    "title": "Expor tamanho da amostra e filtro mínimo de avaliações",
+    "goal": "Deixar claro quando uma nota se apoia em pouca participação.",
+    "scope": "Adicionar filtro opcional de mínimo 1/5/10 avaliações ao ranking e badge textual de amostra pequena (<5). Mostrar distribuição sem chamar a nota de representativa ou verificada.",
+    "checks": [
+      "Limite atua no banco antes da paginação; 0/1/4/5 reviews têm comportamento definido.",
+      "Badge não altera a média nem cria pontuação secreta.",
+      "Leitor de tela entende média, quantidade e distribuição; gráfico não depende só de cor."
+    ],
+    "tests": "SQL limites 1/5/10; widget amostra pequena e Sem avaliações; acessibilidade de histograma.",
+    "deps": [
+      "NOT03"
+    ],
+    "paths": "lib/features/summary/; lib/features/ranking/; lib/design_system/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "vectr444"
+  },
+  {
+    "owner": "vectr444",
+    "code": "PER01",
+    "cycle": 1,
+    "title": "Criar perfil público com campos permitidos e edição própria",
+    "goal": "Transformar o apelido em identidade reconhecível sem expor dados de autenticação.",
+    "scope": "Ampliar profiles com bio opcional até 160 caracteres e contrato PublicProfile/ProfileRepository. Manter nickname 2–40; leitura pública dentro do app somente dos campos permitidos; nunca email, token ou localização privada.",
+    "checks": [
+      "Migração preserva apelidos e trigger dos usuários existentes.",
+      "A só edita campos permitidos do próprio perfil; não pode criar papel de moderador.",
+      "Modelo separa dados públicos de preferências privadas; mapper não usa select(*) por conveniência."
+    ],
+    "tests": "Validação Unicode e trim; RLS A/B; consulta comprova ausência de email/claims e campos privados.",
+    "deps": [],
+    "paths": "lib/features/profile/; lib/data/profile_repository.dart; supabase/migrations/",
+    "size": "G",
+    "reviewer": "Otaviofertig"
+  },
+  {
+    "owner": "vectr444",
+    "code": "PER02",
+    "cycle": 2,
+    "title": "Abrir perfil do autor e suas avaliações públicas",
+    "goal": "Permitir conhecer o histórico de quem avaliou um produto.",
+    "scope": "Criar página de perfil com apelido, bio, total de avaliações e lista paginada; tocar no autor do comentário abre perfil e tocar numa review abre produto.",
+    "checks": [
+      "Página funciona para próprio perfil e outro usuário; conteúdo moderado não aparece.",
+      "Perfil inexistente e lista vazia têm estados distintos; paginação estável.",
+      "Nenhum favorito privado ou relato privado aparece no perfil."
+    ],
+    "tests": "Widget navegação autor→perfil→produto, perfil ausente, vazio e página 2; integração de visibilidade.",
+    "deps": [
+      "PER01",
+      "MOD01"
+    ],
+    "paths": "lib/features/profile/; lib/features/comments/; lib/data/profile_repository.dart",
+    "size": "M",
+    "reviewer": "Otaviofertig"
+  },
+  {
+    "owner": "vectr444",
+    "code": "PER03",
+    "cycle": 3,
+    "title": "Editar perfil com preview e persistência",
+    "goal": "Permitir que o usuário se apresente e veja o resultado da edição.",
+    "scope": "Criar formulário preenchido de apelido/bio, detecção de alterações e confirmação ao descartar; salvar pelo ProfileRepository e atualizar autores visíveis após sucesso.",
+    "checks": [
+      "Erros preservam o texto digitado; salvar bloqueado enquanto envia.",
+      "Cancelar mantém perfil original; salvar sem mudança não faz escrita.",
+      "Limites do app e do banco coincidem; erro de sessão não aparece como sucesso."
+    ],
+    "tests": "Widget edição, descartar, falha e limite Unicode; teste refresh de comentário após alteração.",
+    "deps": [
+      "PER01",
+      "PER02"
+    ],
+    "paths": "lib/features/profile/; lib/features/nickname/; test/profile_editor_test.dart",
+    "size": "M",
+    "reviewer": "Otaviofertig"
+  },
+  {
+    "owner": "vectr444",
+    "code": "PER04",
+    "cycle": 4,
+    "title": "Adicionar avatar com Storage e permissão por usuário",
+    "goal": "Reconhecer autores sem depender apenas do apelido.",
+    "scope": "Implementar seletor, compressão/validação de imagem e upload via repositório para bucket de avatares; path por userId; remover/substituir imagem e fallback de iniciais. Limite 2 MB após processamento, JPEG/PNG, sem metadados de localização.",
+    "checks": [
+      "Políticas do Storage bloqueiam escrita/exclusão em pasta alheia; visibilidade de leitura é documentada como avatar público.",
+      "Falha no upload não troca referência; substituição evita cache mostrar imagem antiga.",
+      "Permissão negada, arquivo inválido e remoção mantêm perfil utilizável."
+    ],
+    "tests": "Mock upload falha; validação MIME/tamanho; RLS Storage com A/B; widget fallback e atualização.",
+    "deps": [
+      "PER03"
+    ],
+    "paths": "lib/features/profile/; lib/data/avatar_repository.dart; supabase/migrations/; android/",
+    "size": "G",
+    "reviewer": "Otaviofertig"
+  },
+  {
+    "owner": "Otaviofertig",
+    "code": "AUT01",
+    "cycle": 1,
+    "title": "Controlar ciclo de sessão e troca de usuário",
+    "goal": "Evitar que dados de uma conta apareçam depois de entrar em outra.",
+    "scope": "Criar AuthRepository/SessionController injetável com estados inicializando, visitante anônimo, conta permanente e erro. Reagir a eventos Auth e reconstruir escopo sem criar sessões anônimas em loop.",
+    "checks": [
+      "Refresh de token não reinicia toda navegação; troca de userId invalida caches e listeners anteriores.",
+      "Sessão expirada tem recuperação explícita; sem rede não apaga a identidade local.",
+      "Nunca persistir senha/token manualmente em SharedPreferences ou logs."
+    ],
+    "tests": "Fake stream de auth com refresh, expiração, A→B e eventos duplicados; widget estados de bootstrap.",
+    "deps": [],
+    "paths": "lib/main.dart; lib/core/app_scope.dart; lib/features/auth/; lib/data/auth_repository.dart",
+    "size": "G",
+    "reviewer": "VolpiLV"
+  },
+  {
+    "owner": "Otaviofertig",
+    "code": "AUT02",
+    "cycle": 2,
+    "title": "Converter visitante em conta sem perder contribuições",
+    "goal": "Recuperar avaliações e favoritos em outro aparelho.",
+    "scope": "Fluxo Salvar minha conta com email/senha e confirmação usando vinculação da identidade anônima existente no Supabase. Mostrar confirmação pendente; tratar email já usado sem mesclar contas automaticamente.",
+    "checks": [
+      "Mesmo userId antes/depois da confirmação; avaliações e favoritos continuam vinculados.",
+      "Cancelar ou erro mantém sessão visitante; mensagens não revelam existência de contas de terceiros.",
+      "Limites/reenvio e configuração de callback estão documentados para ambiente de teste; nenhuma senha é gravada pelo app."
+    ],
+    "tests": "Fake sucesso, confirmação pendente e conflito; integração em staging comprova mesmo UID e dados preservados.",
+    "deps": [
+      "AUT01"
+    ],
+    "paths": "lib/features/auth/; lib/data/auth_repository.dart; android/; docs/",
+    "size": "G",
+    "reviewer": "VolpiLV"
+  },
+  {
+    "owner": "Otaviofertig",
+    "code": "AUT03",
+    "cycle": 3,
+    "title": "Entrar em conta existente e recuperar acesso",
+    "goal": "Permitir retorno em outro dispositivo com uma jornada completa.",
+    "scope": "Implementar login email/senha, recuperação por email e callback de redefinição de senha. Alertar sobre contribuições da sessão visitante antes de trocar; não prometer migração entre contas.",
+    "checks": [
+      "Erro de credencial tem mensagem genérica; envio/reenvio respeita estado de loading e limites.",
+      "Callback inválido/expirado não derruba app nem expõe token em log.",
+      "Login recupera dados da conta alvo; dados do visitante não são transferidos implicitamente."
+    ],
+    "tests": "Widget login inválido, callback expirado, recuperação e troca de usuário; teste manual de email/callback em staging.",
+    "deps": [
+      "AUT01",
+      "AUT02"
+    ],
+    "paths": "lib/features/auth/; lib/data/auth_repository.dart; android/; test/auth/",
+    "size": "M",
+    "reviewer": "VolpiLV"
+  },
+  {
+    "owner": "Otaviofertig",
+    "code": "AUT04",
+    "cycle": 4,
+    "title": "Sair com segurança e proteger ações de conta",
+    "goal": "Definir claramente o que um visitante e uma conta podem fazer.",
+    "scope": "Criar guard reutilizável para novas ações sociais que exigem conta confirmada, saída com confirmação para visitante não salvo e invalidação de caches. Continuar permitindo explorar catálogo e o fluxo legado da aula.",
+    "checks": [
+      "Bloqueio é aplicado também no servidor às novas escritas sociais; UI não é autorização.",
+      "Após sair, favoritos/listas/notificações da conta anterior não aparecem.",
+      "Botão Salvar minha conta retorna à ação original após confirmação quando possível; sem redirect loop."
+    ],
+    "tests": "Widget guard/cancelamento/retorno; RLS visitante vs conta nas novas tabelas; logout com cache preenchido.",
+    "deps": [
+      "AUT03",
+      "SOC01",
+      "CON01",
+      "LIS01"
+    ],
+    "paths": "lib/features/auth/; lib/core/; supabase/tests/",
+    "size": "G",
+    "reviewer": "VolpiLV"
+  },
+  {
+    "owner": "VolpiLV",
+    "code": "MAR01",
+    "cycle": 1,
+    "title": "Criar diretório paginado de marcas do catálogo",
+    "goal": "Encontrar uma marca sem precisar saber o nome de um produto.",
+    "scope": "Criar BrandRepository e tela de busca por marca com trim, caixa e acentos para pesquisa; identidade mantém brand_key existente. Não consolidar marcas diferentes por heurística nem alterar FK nesta rodada.",
+    "checks": [
+      "Marca nula/vazia não vira registro real; quantidade de produtos é calculada sem duplicar.",
+      "Busca/paginação no servidor; nomes iguais normalizados mantêm agrupamento compatível com dados atuais.",
+      "Tela abre seleção de marca pelo contrato de navegação; loading/erro/vazio reais."
+    ],
+    "tests": "SQL marcas vazias, variantes de caixa, acentos e duas páginas; widget busca e retry.",
+    "deps": [],
+    "paths": "lib/features/brands/; lib/data/brand_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "ThiagoBorsatto"
+  },
+  {
+    "owner": "VolpiLV",
+    "code": "MAR02",
+    "cycle": 2,
+    "title": "Entregar página da marca com produtos e reputação",
+    "goal": "Avaliar a marca e descobrir seu catálogo em um único lugar.",
+    "scope": "Criar detalhe por brandKey com média ponderada, quantidade de reviews e produtos paginados; região opcional limita produtos encontrados e mostra contexto separado da nota global.",
+    "checks": [
+      "Média global não muda silenciosamente quando a região muda.",
+      "Marca sem reviews mostra Sem avaliações; sem produto regional oferece ampliar busca.",
+      "Produto navega para ficha e voltar preserva marca/posição."
+    ],
+    "tests": "Widget marca sem reviews, filtro regional e volta; contrato com BrandStats ponderado.",
+    "deps": [
+      "MAR01",
+      "NOT02",
+      "BUS02",
+      "GEO02"
+    ],
+    "paths": "lib/features/brands/; lib/data/brand_repository.dart",
+    "size": "M",
+    "reviewer": "ThiagoBorsatto"
+  },
+  {
+    "owner": "VolpiLV",
+    "code": "MAR03",
+    "cycle": 3,
+    "title": "Seguir e deixar de seguir marcas",
+    "goal": "Guardar interesses para encontrar novidades relevantes.",
+    "scope": "Criar brand_follows por userId/brandKey com unicidade e preferências privadas; implementar botão em detalhe da marca e repositório com setFollowing idempotente.",
+    "checks": [
+      "Usuário só lê/escreve seus interesses; chave de marca precisa existir no catálogo.",
+      "Toques repetidos não duplicam; falha reverte indicador otimista.",
+      "Visitante recebe convite de salvar conta para nova ação social; servidor valida conta confirmada."
+    ],
+    "tests": "RLS A/B/visitante, seguir duas vezes e desfazer; widget loading e rollback.",
+    "deps": [
+      "MAR02",
+      "AUT01"
+    ],
+    "paths": "lib/features/brands/; lib/data/brand_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "ThiagoBorsatto"
+  },
+  {
+    "owner": "VolpiLV",
+    "code": "MAR04",
+    "cycle": 4,
+    "title": "Mostrar novidades das marcas seguidas",
+    "goal": "Criar um motivo para voltar ao app além da busca pontual.",
+    "scope": "Seção paginada com produtos recentemente adicionados de marcas seguidas; data de importação explícita, não data de lançamento. Remover marca da lista de interesses e acessar detalhe.",
+    "checks": [
+      "Sem marcas seguidas oferece diretório; sem produtos novos informa período.",
+      "Uma consulta paginada, sem carregar o catálogo inteiro ou misturar publicidade.",
+      "Desseguir atualiza seção e nenhum interesse de outro usuário aparece."
+    ],
+    "tests": "SQL período/seguimentos e paginação; widget vazio, desseguir e produto repetido.",
+    "deps": [
+      "MAR03"
+    ],
+    "paths": "lib/features/brands/; lib/data/brand_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "ThiagoBorsatto"
+  },
+  {
+    "owner": "ThiagoBorsatto",
+    "code": "PRE01",
+    "cycle": 1,
+    "title": "Modelar preço observado com moeda, local e data",
+    "goal": "Comparar relatos de preço com contexto suficiente.",
+    "scope": "Criar price_observations e repositório: barcode, authorId, cityId, loja, priceCents BRL inteiro positivo, observedAt e createdAt. Idempotency key por envio; migração não altera sightings antigas.",
+    "checks": [
+      "Sem double monetário; rejeitar preço não positivo e data futura no banco.",
+      "Escrita própria; leitura de preço público não expõe dados privados do autor; sem afirmação de compra verificada.",
+      "CityId referencia GEO01; parser aceita formato brasileiro e recusa ambiguidade."
+    ],
+    "tests": "Conversão R$ 12,90→1290; constraints e RLS A/B; repetição da mesma chave não duplica.",
+    "deps": [
+      "GEO01"
+    ],
+    "paths": "lib/features/prices/; lib/data/price_repository.dart; supabase/migrations/",
+    "size": "G",
+    "reviewer": "JoaoVolkmann"
+  },
+  {
+    "owner": "ThiagoBorsatto",
+    "code": "PRE02",
+    "cycle": 2,
+    "title": "Registrar preço na ficha do produto",
+    "goal": "Permitir contribuição rápida e compreensível pelo celular.",
+    "scope": "Formulário de preço, loja, cidade e data; preview do valor formatado; confirmação e carregamento. Usar preferência regional como sugestão editável, nunca localização presumida.",
+    "checks": [
+      "Valor validado antes de enviar; erro preserva formulário e timeout não reenvia sozinho.",
+      "Sucesso atualiza histórico; registro é identificado como informado pela comunidade.",
+      "Cidade ausente obriga escolher; formato monetário e teclado são adequados a pt-BR."
+    ],
+    "tests": "Widget valor inválido, mudança de região, sucesso e timeout; fake idempotência.",
+    "deps": [
+      "PRE01",
+      "GEO02"
+    ],
+    "paths": "lib/features/prices/; lib/features/detail/; test/prices/",
+    "size": "M",
+    "reviewer": "JoaoVolkmann"
+  },
+  {
+    "owner": "ThiagoBorsatto",
+    "code": "PRE03",
+    "cycle": 3,
+    "title": "Exibir histórico e menor preço recente da região",
+    "goal": "Dar contexto de preço sem anunciar oferta ou estoque garantido.",
+    "scope": "Consulta paginada por produto/cidade/período com menor, maior e último preço relatado; série por dia e alternativa textual acessível. Exibir loja/data e quantidade de observações.",
+    "checks": [
+      "Filtro temporal usa observedAt; não mistura cidades sem indicação.",
+      "Dia sem observação é ausência, não preço zero; não inventar interpolação.",
+      "Preço antigo tem data visível; mínimo não é rotulado como disponível agora."
+    ],
+    "tests": "SQL janelas/empates/ausência; widget uma observação, nenhuma e gráfico com leitor de tela.",
+    "deps": [
+      "PRE02"
+    ],
+    "paths": "lib/features/prices/; lib/data/price_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "JoaoVolkmann"
+  },
+  {
+    "owner": "ThiagoBorsatto",
+    "code": "PRE04",
+    "cycle": 4,
+    "title": "Corrigir e excluir meus relatos de preço",
+    "goal": "Permitir corrigir enganos sem alterar contribuições alheias.",
+    "scope": "Listar meus relatos, editar valor/local/data e excluir com confirmação; guardar updatedAt do servidor e atualizar agregados após escrita. Tratar registro removido em outro aparelho.",
+    "checks": [
+      "Cancelar exclusão mantém relato; confirmar elimina apenas o alvo próprio.",
+      "Zero linhas em update/delete informa conflito/indisponibilidade e não sucesso.",
+      "Outro usuário não altera preço via API; editar não modifica autor/createdAt."
+    ],
+    "tests": "RLS spoofing de autor, zero linhas e concorrência; widget cancelar/confirmar/erro; agregados recalculados.",
+    "deps": [
+      "PRE03"
+    ],
+    "paths": "lib/features/prices/; lib/data/price_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "JoaoVolkmann"
+  },
+  {
+    "owner": "JoaoVolkmann",
+    "code": "CON01",
+    "cycle": 1,
+    "title": "Persistir respostas às avaliações com autoria",
+    "goal": "Permitir conversa sobre uma experiência sem criar outra nota.",
+    "scope": "Criar review_replies e ReplyRepository: texto 1–500, reviewId, autor, timestamps, paginação e edição/exclusão próprias. Uma camada de respostas, sem árvore infinita. Nova escrita exige conta confirmada.",
+    "checks": [
+      "Resposta não altera média/contagem de avaliações; referência inválida é rejeitada.",
+      "RLS impede editar outro autor e referenciar review oculta após integração MOD01.",
+      "Ordenação createdAt/id estável; texto original é persistido e moderação de exibição reaproveitada."
+    ],
+    "tests": "RLS A/B/visitante, constraints, paginação e review removida; parser do repositório.",
+    "deps": [],
+    "paths": "lib/features/replies/; lib/data/reply_repository.dart; supabase/migrations/",
+    "size": "G",
+    "reviewer": "yaraSchneider"
+  },
+  {
+    "owner": "JoaoVolkmann",
+    "code": "CON02",
+    "cycle": 2,
+    "title": "Responder e consultar conversa de uma avaliação",
+    "goal": "Dar uma interface completa às respostas da comunidade.",
+    "scope": "Botão Responder nos comentários, lista paginada e editor; ações próprias de editar/excluir com confirmação; consumir ReplyRepository e reutilizar erros/design system.",
+    "checks": [
+      "Enviar vazio/maior que limite é bloqueado; duplo toque não duplica.",
+      "Texto preservado em erro; retorno de edição/exclusão atualiza a conversa.",
+      "Autor abre perfil; moderação de exibição não modifica conteúdo armazenado."
+    ],
+    "tests": "Widget envio, cancelamento, erro, paginação e autor; teste ação visitante.",
+    "deps": [
+      "CON01",
+      "PER01",
+      "AUT01"
+    ],
+    "paths": "lib/features/replies/; lib/features/comments/; test/replies/",
+    "size": "M",
+    "reviewer": "yaraSchneider"
+  },
+  {
+    "owner": "JoaoVolkmann",
+    "code": "CON03",
+    "cycle": 3,
+    "title": "Marcar avaliação como útil sem duplicar votos",
+    "goal": "Destacar contribuições que ajudam a decidir uma compra.",
+    "scope": "Criar review_helpful por reviewId/userId, contagem consultável em lote e botão Útil com toggle; impedir voto na própria review, inclusive por API.",
+    "checks": [
+      "Unicidade garante um voto; desfazer remove somente voto próprio.",
+      "Contagem vem do banco; não confiar em número enviado pelo app.",
+      "Falha reverte estado otimista; review oculta/removida não aceita voto."
+    ],
+    "tests": "RLS autoria, autovoto, duplicata e remoção; widget rollback e contagem zero/um.",
+    "deps": [
+      "CON01",
+      "MOD01"
+    ],
+    "paths": "lib/features/comments/; lib/data/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "yaraSchneider"
+  },
+  {
+    "owner": "JoaoVolkmann",
+    "code": "CON04",
+    "cycle": 4,
+    "title": "Ordenar comentários por recentes, úteis e nota",
+    "goal": "Ajudar a encontrar relatos relevantes sem carregar tudo de uma vez.",
+    "scope": "Evoluir consulta de reviews para ordenação recentes/úteis/maior nota/menor nota, com paginação no servidor e desempate estável. Preservar moderação, autor e ações atuais.",
+    "checks": [
+      "Trocar ordem zera cursor; nenhuma página repete IDs em conjunto estável.",
+      "Ordenação por útil usa votos reais e desempatados por data/id.",
+      "Erro na página seguinte preserva comentários já exibidos."
+    ],
+    "tests": "SQL empates e reviews sem votos; widget mudança de ordem, moderação e retry.",
+    "deps": [
+      "CON03"
+    ],
+    "paths": "lib/features/comments/; lib/data/supabase_reviews.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "yaraSchneider"
+  },
+  {
+    "owner": "yaraSchneider",
+    "code": "LIS01",
+    "cycle": 1,
+    "title": "Criar listas privadas de produtos no Supabase",
+    "goal": "Organizar produtos além de um único conjunto de favoritos.",
+    "scope": "Criar product_lists e list_items com proprietário, nome 1–60, descrição opcional 200, visibility private/public default private e unicidade lista/barcode. ListRepository e fakes; novas escritas exigem conta confirmada.",
+    "checks": [
+      "RLS protege lista privada e itens inclusive por consulta direta/join; dono pode editar.",
+      "Produto duplicado na mesma lista não duplica; exclusão da lista limpa itens.",
+      "Favoritos atuais continuam funcionando sem migração silenciosa."
+    ],
+    "tests": "SQL A/B em listas privadas/públicas e itens, duplicata/cascade; mapper e fake.",
+    "deps": [],
+    "paths": "lib/features/lists/; lib/data/list_repository.dart; supabase/migrations/",
+    "size": "G",
+    "reviewer": "JoaooVitorSilva"
+  },
+  {
+    "owner": "yaraSchneider",
+    "code": "LIS02",
+    "cycle": 2,
+    "title": "Criar, renomear e excluir minhas listas",
+    "goal": "Dar controle sobre a organização pessoal de produtos.",
+    "scope": "Tela Minhas listas com formulário e validação, edição de nome/descrição e confirmação para excluir; preview de quantidade sem consulta por item.",
+    "checks": [
+      "Vazio oferece criar primeira lista; cancelar não grava.",
+      "Erro preserva valores; excluir com zero linhas não mostra sucesso indevido.",
+      "Lista nasce privada, com indicação textual clara."
+    ],
+    "tests": "Widget CRUD, cancelar exclusão, vazio/erro e usuário trocado.",
+    "deps": [
+      "LIS01",
+      "AUT01"
+    ],
+    "paths": "lib/features/lists/; lib/app.dart; test/lists/",
+    "size": "M",
+    "reviewer": "JoaooVitorSilva"
+  },
+  {
+    "owner": "yaraSchneider",
+    "code": "LIS03",
+    "cycle": 3,
+    "title": "Adicionar produtos a listas pela ficha",
+    "goal": "Conectar a organização à jornada de descoberta.",
+    "scope": "Seletor de listas próprias na ficha com adicionar/remover idempotentes, criar lista e detalhes paginados da lista; produto navega para ficha.",
+    "checks": [
+      "Um produto pode estar em várias listas; toggle de uma não afeta outra.",
+      "Falha não confirma item salvo; retorno preserva seleção.",
+      "Lista removida em outro aparelho tem mensagem e atualização, sem loop."
+    ],
+    "tests": "Widget duas listas, repetição de toque, falha e lista removida; RLS tentativa em lista alheia.",
+    "deps": [
+      "LIS02"
+    ],
+    "paths": "lib/features/lists/; lib/features/detail/; lib/data/list_repository.dart",
+    "size": "M",
+    "reviewer": "JoaooVitorSilva"
+  },
+  {
+    "owner": "yaraSchneider",
+    "code": "LIS04",
+    "cycle": 4,
+    "title": "Publicar lista por escolha explícita e permitir leitura",
+    "goal": "Compartilhar recomendações mantendo organização privada por padrão.",
+    "scope": "Ação Publicar/Tornar privada com confirmação do que ficará visível; página de leitura por id com autor e produtos; compartilhar link usando o roteador do app.",
+    "checks": [
+      "Leitor não dono nunca edita; lista privada não revela nome/itens/contagem via API.",
+      "Tornar privada revoga novas leituras e link apresenta conteúdo indisponível.",
+      "Sem compartilhar favoritos ou outras listas automaticamente."
+    ],
+    "tests": "RLS pública→privada e acesso por id; widget confirmação e link inválido.",
+    "deps": [
+      "LIS03",
+      "UX03"
+    ],
+    "paths": "lib/features/lists/; lib/data/list_repository.dart; supabase/tests/",
+    "size": "M",
+    "reviewer": "JoaooVitorSilva"
+  },
+  {
+    "owner": "JoaooVitorSilva",
+    "code": "SOC01",
+    "cycle": 1,
+    "title": "Persistir relação de seguir pessoas",
+    "goal": "Escolher pessoas cujas avaliações interessam.",
+    "scope": "Criar user_follows com followerId/followedId únicos, timestamps e FollowRepository; só proprietário altera e conta confirmada escreve; impedir seguir a si mesmo.",
+    "checks": [
+      "Seguir duas vezes é idempotente; desfazer remove só relação própria.",
+      "Contagens não aceitam valores do cliente; contrato documenta relações como visíveis dentro do app.",
+      "Exclusão de perfil remove vínculos; dados não usam nickname como chave."
+    ],
+    "tests": "RLS A/B/visitante, autoseguimento, duplicata/cascade; mapper Dart.",
+    "deps": [],
+    "paths": "lib/features/social/; lib/data/follow_repository.dart; supabase/migrations/",
+    "size": "G",
+    "reviewer": "DouglasNolli"
+  },
+  {
+    "owner": "JoaooVitorSilva",
+    "code": "SOC02",
+    "cycle": 2,
+    "title": "Seguir pelo perfil e listar seguidores",
+    "goal": "Permitir navegar pelas conexões da comunidade.",
+    "scope": "Botão Seguir/Deixar de seguir em perfil alheio; listas paginadas de seguidores/seguindo e contagens; tratar estado otimista com rollback.",
+    "checks": [
+      "Próprio perfil não tem botão seguir; tocar em pessoa abre perfil.",
+      "Duplo toque não dispara escritas concorrentes; erro retorna estado correto.",
+      "Vazio convida explorar perfis sem importar contatos do aparelho."
+    ],
+    "tests": "Widget seguir/desseguir/falha/autoperfil; paginação sem duplicata.",
+    "deps": [
+      "SOC01",
+      "PER02",
+      "AUT01"
+    ],
+    "paths": "lib/features/social/; lib/features/profile/",
+    "size": "M",
+    "reviewer": "DouglasNolli"
+  },
+  {
+    "owner": "JoaooVitorSilva",
+    "code": "SOC03",
+    "cycle": 3,
+    "title": "Consultar feed cronológico de pessoas seguidas",
+    "goal": "Reunir experiências recentes relevantes ao usuário.",
+    "scope": "Consulta paginada de reviews publicadas por contas seguidas, com produto/autor/nota em lote, cursor data/id; respeitar conteúdo moderado e preparar exclusão de autores silenciados.",
+    "checks": [
+      "Somente seguidos entram; próprios posts não são incluídos automaticamente.",
+      "Não há N+1; edição de texto não cria novo evento/publicação.",
+      "Desseguir afeta próxima atualização e páginas não duplicam reviews."
+    ],
+    "tests": "SQL seguido/não seguido/oculto, empate e paginação; contrato de mute após MOD03.",
+    "deps": [
+      "SOC01",
+      "MOD01"
+    ],
+    "paths": "lib/data/feed_repository.dart; supabase/migrations/; supabase/tests/",
+    "size": "M",
+    "reviewer": "DouglasNolli"
+  },
+  {
+    "owner": "JoaooVitorSilva",
+    "code": "SOC04",
+    "cycle": 4,
+    "title": "Entregar feed com navegação e atualização",
+    "goal": "Dar uma tela social útil sem remover a descoberta por catálogo.",
+    "scope": "Tela Seguindo com pull-to-refresh, paginação, navegação para produto/perfil e ações de útil/responder; convite para seguir pessoas quando vazio.",
+    "checks": [
+      "Não exibir comentário sem moderação visual; autor silenciado desaparece após refresh.",
+      "Erro de paginação mantém conteúdo; loading não deixa ações duplicarem.",
+      "Voltar do produto preserva rolagem e feed tem alternativa vazia acionável."
+    ],
+    "tests": "Widget vazio, refresh, página 2, perfil/produto e mute; teste integrado em duas contas.",
+    "deps": [
+      "SOC02",
+      "SOC03",
+      "CON03",
+      "MOD03"
+    ],
+    "paths": "lib/features/social/; lib/app.dart; test/feed/",
+    "size": "M",
+    "reviewer": "DouglasNolli"
+  },
+  {
+    "owner": "DouglasNolli",
+    "code": "UX01",
+    "cycle": 1,
+    "title": "Mostrar resumo acessível dos filtros e estado de busca",
+    "goal": "Deixar explícito por que certos produtos estão sendo mostrados.",
+    "scope": "Criar componente de chips removíveis e resumo textual de CatalogQuery para texto, marca, categoria, cidade e nota; ação Limpar. Trabalhar com fake até o endpoint ficar pronto.",
+    "checks": [
+      "Remover um chip conserva os outros filtros; limpar volta à consulta padrão.",
+      "Layout quebra linha em 320 px/200%; cada remover tem rótulo para leitor de tela.",
+      "Estado Nenhum resultado informa combinação ativa e oferece ação concreta."
+    ],
+    "tests": "Widget quatro filtros, remoção individual, limpar, texto ampliado e sem overflow.",
+    "deps": [
+      "BUS01"
+    ],
+    "paths": "lib/design_system/; lib/features/catalog/; test/catalog_filter_summary_test.dart",
+    "size": "M",
+    "reviewer": "juliacdacunha"
+  },
+  {
+    "owner": "DouglasNolli",
+    "code": "UX02",
+    "cycle": 2,
+    "title": "Salvar e restaurar buscas pessoais",
+    "goal": "Repetir rapidamente buscas como laticínios de uma marca em uma cidade.",
+    "scope": "Persistir saved_searches privadas por usuário com nome e CatalogQuery versionado; UI salvar/renomear/excluir e aplicar. Limite 20 por conta verificado no servidor.",
+    "checks": [
+      "RLS impede ler busca alheia; filtros são revalidados ao restaurar.",
+      "Salvar não executa alerta automático nem promete monitoramento.",
+      "Query antiga/incompatível tem mensagem e opção excluir; aplicar não altera a busca até confirmação."
+    ],
+    "tests": "SQL limite/RLS; round-trip; widget query incompatível e aplicar/cancelar.",
+    "deps": [
+      "BUS01",
+      "AUT01"
+    ],
+    "paths": "lib/features/saved_searches/; lib/data/; supabase/migrations/",
+    "size": "M",
+    "reviewer": "juliacdacunha"
+  },
+  {
+    "owner": "DouglasNolli",
+    "code": "UX03",
+    "cycle": 3,
+    "title": "Compartilhar e abrir links de produto, perfil e lista",
+    "goal": "Permitir indicar conteúdo do app a outra pessoa.",
+    "scope": "Roteador testável com links internos documentados e compartilhamento nativo; resolver produto por barcode, perfil/lista por id. Usar esquema próprio nesta etapa; HTTPS universal só com domínio verificado do projeto.",
+    "checks": [
+      "App fechado/aberto abre destino após bootstrap; não cria sessão anônima adicional por link.",
+      "Entrada inválida e conteúdo inexistente/privado mostram indisponível sem crash.",
+      "Link não contém tokens, email ou estado privado; lista depende de permissão real."
+    ],
+    "tests": "Parser malformado, barcode com zero e UUID inválido; Android cold/warm start; fake acesso negado.",
+    "deps": [
+      "CAT01",
+      "PER01",
+      "AUT01",
+      "LIS01"
+    ],
+    "paths": "lib/core/navigation/; lib/app.dart; android/; test/deep_links/",
+    "size": "G",
+    "reviewer": "juliacdacunha"
+  },
+  {
+    "owner": "DouglasNolli",
+    "code": "UX04",
+    "cycle": 4,
+    "title": "Comparar custo por unidade de produtos equivalentes",
+    "goal": "Distinguir embalagem barata de melhor custo por quantidade.",
+    "scope": "Ampliar comparação de dois produtos com último preço observado na região/janela e custo por kg ou litro quando unidades forem compatíveis; mostrar fontes/data e manter notas ao lado.",
+    "checks": [
+      "500 g por R$10 resulta em R$20/kg; cálculo monetário evita arredondamento intermediário indevido.",
+      "Massa vs volume, quantidade desconhecida ou preço ausente não gera vencedor.",
+      "Comparação informa lojas/datas diferentes e não garante oferta atual."
+    ],
+    "tests": "Testes unidades, centavos, arredondamento e incompatibilidade; widget dados ausentes e tela pequena.",
+    "deps": [
+      "CAT03",
+      "PRE03",
+      "GEO02"
+    ],
+    "paths": "lib/features/compare/; test/features/compare/",
+    "size": "G",
+    "reviewer": "juliacdacunha"
+  },
+  {
+    "owner": "juliacdacunha",
+    "code": "ENT01",
+    "cycle": 1,
+    "title": "Criar primeiro uso com região opcional e conta",
+    "goal": "Explicar o valor do app e permitir começar a explorar rapidamente.",
+    "scope": "Onboarding curto com proposta, escolha opcional de cidade e Continuar explorando; link Salvar minha conta. Persistir versão concluída localmente e oferecer reabrir pela ajuda.",
+    "checks": [
+      "Pular não exige GPS, email nem cria cadastro permanente.",
+      "Não reaparece a cada hot reload/início; pode reabrir voluntariamente.",
+      "Seletor usa interface fake até GEO02; nenhum botão é decorativo ou aponta para tela inexistente."
+    ],
+    "tests": "Widget concluir/pular/reabrir, persistência e texto 200%; integrar seletor/conta quando prontos.",
+    "deps": [],
+    "paths": "lib/features/onboarding/; lib/main.dart; test/onboarding_test.dart",
+    "size": "M",
+    "reviewer": "MiguelWainst"
+  },
+  {
+    "owner": "juliacdacunha",
+    "code": "ENT02",
+    "cycle": 2,
+    "title": "Salvar preferências privadas de notificações no app",
+    "goal": "Dar controle sobre avisos sociais antes de começar a enviá-los.",
+    "scope": "Criar notification_preferences por userId com toggles para respostas e novos seguidores, default false até escolha; repositório, tela e RLS. Escopo somente notificações dentro do app.",
+    "checks": [
+      "A só lê/edita suas preferências; trocar conta recarrega preferências corretas.",
+      "Erro de escrita reverte toggle e informa problema.",
+      "Não pedir permissão push nem prometer email/SMS nesta entrega."
+    ],
+    "tests": "SQL RLS A/B; widget carregamento, toggle, rollback e troca de sessão.",
+    "deps": [
+      "AUT01"
+    ],
+    "paths": "lib/features/notifications/; lib/data/notification_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "MiguelWainst"
+  },
+  {
+    "owner": "juliacdacunha",
+    "code": "ENT03",
+    "cycle": 3,
+    "title": "Gerar notificações de resposta e novo seguidor no servidor",
+    "goal": "Avisar sobre interação real sem permitir spam criado pelo cliente.",
+    "scope": "Criar notifications com recipient, tipo, alvo, createdAt/readAt e chave única por evento. Geração server-side para reply/follow conforme preferência; sem autoaviso; cliente só lê e marca seus avisos como lidos.",
+    "checks": [
+      "Cliente não pode inserir aviso para outro usuário nem editar destinatário/conteúdo.",
+      "Evento repetido não duplica; preferência desativada não gera novo aviso.",
+      "Não copiar texto privado para payload; alvo removido/oculto é resolvido como indisponível; funções privilegiadas têm escopo mínimo."
+    ],
+    "tests": "SQL eventos reais, autoaviso, duplicação, preferência e spoofing; teste alteração apenas de readAt próprio.",
+    "deps": [
+      "ENT02",
+      "CON01",
+      "SOC01",
+      "MOD01"
+    ],
+    "paths": "supabase/migrations/; supabase/tests/; lib/data/notification_repository.dart",
+    "size": "G",
+    "reviewer": "MiguelWainst"
+  },
+  {
+    "owner": "juliacdacunha",
+    "code": "ENT04",
+    "cycle": 4,
+    "title": "Entregar central de notificações e contador de não lidas",
+    "goal": "Permitir acompanhar e abrir interações recebidas.",
+    "scope": "Lista paginada, estado lida/não lida, marcar uma/todas como lidas e navegar ao alvo; refresh ao abrir/retomar app. Realtime e push ficam fora desta rodada.",
+    "checks": [
+      "Abrir aviso marca leitura somente para dono; contador vem do banco.",
+      "Alvo removido/oculto informa indisponível e não impede marcar lida.",
+      "Preferências acessíveis pela central; erro não zera contador nem apaga avisos."
+    ],
+    "tests": "Widget contador, paginação, marcar todas, alvo removido e rollback; duas contas sem vazamento.",
+    "deps": [
+      "ENT03",
+      "UX03"
+    ],
+    "paths": "lib/features/notifications/; lib/app.dart; test/notifications/",
+    "size": "M",
+    "reviewer": "MiguelWainst"
+  },
+  {
+    "owner": "MiguelWainst",
+    "code": "EXP01",
+    "cycle": 1,
+    "title": "Separar histórico local por conta e permitir limpar",
+    "goal": "Evitar misturar produtos vistos por pessoas diferentes no mesmo aparelho.",
+    "scope": "Evoluir HistoryStore para chave por userId, limite 50, último acesso e deduplicação por barcode; limpar histórico com confirmação. Migrar histórico legado apenas para sessão atual, sem replicar em todas as contas.",
+    "checks": [
+      "Abrir produto move para topo; iniciar outra conta não mostra histórico anterior.",
+      "Cancelar limpar preserva dados; confirmar esvazia somente a conta atual.",
+      "Persistência corrompida é tratada sem derrubar app; não registra visitas em build."
+    ],
+    "tests": "Store com A/B, 51 visitas, repetição, JSON corrompido e migração única; widget confirmação.",
+    "deps": [],
+    "paths": "lib/features/history/; lib/core/app_scope.dart; test/features/history/",
+    "size": "M",
+    "reviewer": "andreyLazarotto"
+  },
+  {
+    "owner": "MiguelWainst",
+    "code": "EXP02",
+    "cycle": 2,
+    "title": "Cachear últimas fichas lidas para consulta offline",
+    "goal": "Consultar informação já vista quando a rede estiver indisponível.",
+    "scope": "Cache limitado de até 50 fichas públicas com timestamp e versão; repositório decorador cache-first apenas offline ou após erro com escolha explícita; indicador Dados salvos e data.",
+    "checks": [
+      "Não cachear sessão, dados privados, feed ou notificações nessa estrutura.",
+      "Offline não permite fingir gravação nem inventa ficha não visitada.",
+      "Atualização online substitui cache; esquema inválido é descartado com fallback seguro."
+    ],
+    "tests": "Fake relógio/rede, cache miss, versão inválida, limite e atualização; widget aviso offline.",
+    "deps": [
+      "CAT01",
+      "EXP01"
+    ],
+    "paths": "lib/data/cache/; lib/features/detail/; test/offline_product_test.dart",
+    "size": "M",
+    "reviewer": "andreyLazarotto"
+  },
+  {
+    "owner": "MiguelWainst",
+    "code": "EXP03",
+    "cycle": 3,
+    "title": "Preservar rolagem e paginação ao navegar no catálogo",
+    "goal": "Evitar perder a busca depois de abrir vários produtos.",
+    "scope": "Integrar lista lazy à busca paginada, PageStorage/estado por consulta e preservação de itens/posição no retorno; mudar consulta reseta posição. Medir com fixture local de 1000 produtos.",
+    "checks": [
+      "Voltar da ficha não refaz todas as páginas; nenhum request é iniciado por rebuild irrelevante.",
+      "Nova query zera rolagem e itens antigos; não restaura posição de outra cidade.",
+      "Só widgets visíveis são construídos; registrar evidência de desempenho, sem impor número arbitrário de FPS."
+    ],
+    "tests": "Widget rolar→abrir→voltar e mudar query; contagem de chamadas; profile no emulador com fixture.",
+    "deps": [
+      "BUS03"
+    ],
+    "paths": "lib/features/catalog/; lib/app.dart; test/catalog_navigation_test.dart",
+    "size": "M",
+    "reviewer": "andreyLazarotto"
+  },
+  {
+    "owner": "MiguelWainst",
+    "code": "EXP04",
+    "cycle": 4,
+    "title": "Implementar jornada acessível nas telas de descoberta e perfil",
+    "goal": "Tornar filtros, notas e ações utilizáveis com texto ampliado e leitor de tela.",
+    "scope": "Corrigir foco, ordem semântica, alvos de toque e overflow nas novas telas; aplicar rótulos significativos às estrelas/chips/avatares e anúncio de loading/erro. Entrega exige correções de código, não apenas relatório.",
+    "checks": [
+      "Catálogo, filtros, ficha e perfil funcionam em 320 px com texto 200%.",
+      "Leitor de tela distingue nota/quantidade e remover cada filtro; foco retorna após fechar modal.",
+      "Temas claro/escuro mantêm estados legíveis e informação não depende só de cor."
+    ],
+    "tests": "Testes de semantics e layout dos cenários; exploração manual TalkBack no Android, registrando limitações reais.",
+    "deps": [
+      "BUS04",
+      "PER02",
+      "UX01"
+    ],
+    "paths": "lib/design_system/; lib/features/catalog/; lib/features/profile/; test/accessibility/",
+    "size": "G",
+    "reviewer": "andreyLazarotto"
+  },
+  {
+    "owner": "andreyLazarotto",
+    "code": "MOD01",
+    "cycle": 1,
+    "title": "Criar moderação de avaliações com papel protegido e auditoria",
+    "goal": "Permitir ao professor tratar denúncias e ocultar conteúdo abusivo.",
+    "scope": "Evoluir reports com estados/decisão, reviews com visibility e audit log. Papel de moderador em estrutura não editável pelo cliente; operações verificam identidade no servidor. Ocultar é reversível e não apaga a autoria.",
+    "checks": [
+      "Usuário comum não promove a si mesmo, lê fila global ou altera status via API.",
+      "Oculto sai de consultas públicas/estatísticas; autor e moderador têm acesso adequado, documentado.",
+      "Decisão registra ator/data/motivo; migrar policies antigas sem brecha permissiva adicional."
+    ],
+    "tests": "SQL usuário comum/moderador, tentativa de autopromoção, ocultar/restaurar e trilha imutável; regressão das reviews existentes.",
+    "deps": [],
+    "paths": "supabase/migrations/; supabase/tests/; lib/data/moderation_repository.dart",
+    "size": "G",
+    "reviewer": "isaacfonseca-glitch"
+  },
+  {
+    "owner": "andreyLazarotto",
+    "code": "MOD02",
+    "cycle": 2,
+    "title": "Entregar fila de denúncias para moderador",
+    "goal": "Tirar o tratamento de denúncias do SQL Editor.",
+    "scope": "Tela protegida de fila pendente com contexto, filtros, detalhe e ações manter/ocultar/restaurar com motivo; paginação e estados de concorrência. Usar apenas papel validado no backend.",
+    "checks": [
+      "Usuário sem papel vê acesso negado inclusive ao abrir rota direta.",
+      "Duas decisões concorrentes detectam estado alterado, não sobrescrevem silenciosamente.",
+      "Ação exige confirmação e resultado só aparece após persistir audit log."
+    ],
+    "tests": "Widget autorizado/negado, confirmar/cancelar/conflito; integração papel normal vs moderador.",
+    "deps": [
+      "MOD01"
+    ],
+    "paths": "lib/features/moderation/; lib/data/moderation_repository.dart; test/moderation_queue/",
+    "size": "M",
+    "reviewer": "isaacfonseca-glitch"
+  },
+  {
+    "owner": "andreyLazarotto",
+    "code": "MOD03",
+    "cycle": 3,
+    "title": "Silenciar autores no feed pessoal",
+    "goal": "Permitir ajustar a experiência sem apagar contribuições dos outros.",
+    "scope": "Criar user_mutes privados com UI silenciar/desfazer e lista de silenciados; excluir autores na consulta do feed pessoal. É silenciamento de conteúdo, não bloqueio de acesso ao perfil nem recurso de segurança.",
+    "checks": [
+      "A só lê/edita seus silenciados; impedir silenciar a si mesmo.",
+      "Mudar mute afeta feed após refresh e não altera média pública ou perfil de outro usuário.",
+      "Tela explica alcance da ação; não prometer impedir que o outro leia publicações."
+    ],
+    "tests": "RLS A/B, auto-mute, consulta feed com mute e desfazer; widget confirmação e lista.",
+    "deps": [
+      "SOC03",
+      "PER01"
+    ],
+    "paths": "lib/features/moderation/; lib/data/feed_repository.dart; supabase/migrations/",
+    "size": "M",
+    "reviewer": "isaacfonseca-glitch"
+  },
+  {
+    "owner": "andreyLazarotto",
+    "code": "MOD04",
+    "cycle": 4,
+    "title": "Denunciar respostas e limitar envio abusivo no servidor",
+    "goal": "Cobrir o novo conteúdo social com a mesma proteção das avaliações.",
+    "scope": "Adicionar denúncias de replies e integrá-las à fila com alvo tipado; unicidade por autor/alvo, motivos permitidos e limite transacional de 5 denúncias por usuário a cada 10 minutos. Sem remoção automática por volume.",
+    "checks": [
+      "Limite aplicado no servidor e testado com concorrência; cliente recebe mensagem compreensível.",
+      "Denunciar resposta não oculta avaliação inteira; decisão de reply tem auditoria e leitura pública respeita estado.",
+      "Usuário não lê denúncias alheias nem inventa alvo inexistente; repetição do mesmo alvo não conta como novo envio."
+    ],
+    "tests": "SQL limites/concurrency/duplicata e alvo errado; widget denunciar, erro de limite e decisão na fila.",
+    "deps": [
+      "MOD02",
+      "CON02"
+    ],
+    "paths": "lib/features/report/; lib/features/moderation/; supabase/migrations/; supabase/tests/",
+    "size": "G",
+    "reviewer": "isaacfonseca-glitch"
+  },
+  {
+    "owner": "isaacfonseca-glitch",
+    "code": "QUA01",
+    "cycle": 1,
+    "title": "Criar ambiente local reproduzível com duas contas e fixtures",
+    "goal": "Permitir que a turma teste permissões sem mexer nos dados compartilhados.",
+    "scope": "Configurar Supabase local e seed determinístico com cidades, produtos, reviews e usuários A/B de teste; comandos de reset restritos ao ambiente local; script de checagem e teste Flutter que usa repositórios reais no ambiente configurado.",
+    "checks": [
+      "Nenhum script reseta projeto remoto ou usa service_role no Flutter.",
+      "Fixtures de domínio são extensíveis por feature; executar seed duas vezes produz estado conhecido.",
+      "URL local Android usa host adequado e configurações de teste não substituem classroom.json automaticamente."
+    ],
+    "tests": "Subir do zero, resetar local, executar smoke A/B e demonstrar conexão pelo emulador; script falha se URL não for local.",
+    "deps": [],
+    "paths": "supabase/config.toml; supabase/seed.sql; tool/; integration_test/; docs/",
+    "size": "G",
+    "reviewer": "gabrielblankk"
+  },
+  {
+    "owner": "isaacfonseca-glitch",
+    "code": "QUA02",
+    "cycle": 2,
+    "title": "Automatizar jornada de busca, avaliação e persistência",
+    "goal": "Detectar regressões reais entre telas e banco após cada integração.",
+    "scope": "Adicionar integration_test Flutter: buscar produto, abrir ficha, avaliar, editar e reencontrar avaliação ao reiniciar sessão; usar ambiente local com fixtures e limpeza apenas dos dados do teste.",
+    "checks": [
+      "Teste comprova valor persistido, não apenas snackbar de sucesso.",
+      "Inclui cenário offline/erro preservando formulário e um caminho vazio.",
+      "Executável por comando documentado, sem depender da conta pessoal do professor."
+    ],
+    "tests": "Rodar no emulador Android local; produzir relatório de cenários e comprovar que regressão simulada falha.",
+    "deps": [
+      "QUA01"
+    ],
+    "paths": "integration_test/; tool/; test/",
+    "size": "M",
+    "reviewer": "gabrielblankk"
+  },
+  {
+    "owner": "isaacfonseca-glitch",
+    "code": "QUA03",
+    "cycle": 3,
+    "title": "Executar migrações e testes de RLS no CI",
+    "goal": "Impedir integração de regras de acesso ou migrações quebradas.",
+    "scope": "Adicionar job com Supabase local/container, aplicar todas as migrações e executar suíte SQL fornecida pelas features. Fixtures precisam testar anônimo, conta A, conta B e moderador; preservar job verify existente.",
+    "checks": [
+      "CI falha quando A altera dados de B ou quando uma migração não aplica do zero.",
+      "Não usa segredos de produção nem executa SQL no projeto da turma.",
+      "Versões fixadas e diagnóstico de falha útil; testes de banco não são omitidos para deixar pipeline verde."
+    ],
+    "tests": "Execução verde e falha controlada em branch de teste; migração do estado semana 1 para atual sem perda.",
+    "deps": [
+      "QUA01",
+      "MOD01",
+      "PER01",
+      "GEO01"
+    ],
+    "paths": " .github/workflows/; supabase/tests/; tool/",
+    "size": "G",
+    "reviewer": "gabrielblankk"
+  },
+  {
+    "owner": "isaacfonseca-glitch",
+    "code": "QUA04",
+    "cycle": 4,
+    "title": "Gerar APK de homologação e rodar smoke da jornada completa",
+    "goal": "Entregar uma versão instalável e verificável ao final de cada ciclo.",
+    "scope": "Pipeline Android debug/homologação com artefato por commit, sem credenciais administrativas; integração automatizada cobrindo filtros regionais, perfil e interação social. Distinguir APK demo e staging por configuração/identificação.",
+    "checks": [
+      "Artefato identifica commit/modo e não se apresenta como release de loja.",
+      "Build falha em erro de análise/teste; smoke usa dados controlados, não contribuições reais.",
+      "Professor consegue instalar APK e executar roteiro busca→produto→review→perfil→interação; registrar o que é automático/manual."
+    ],
+    "tests": "Baixar e instalar artefato Android; executar smoke em duas contas; verificar pacote sem service_role/senha do banco.",
+    "deps": [
+      "QUA02",
+      "QUA03",
+      "BUS04",
+      "SOC04",
+      "ENT04"
+    ],
+    "paths": " .github/workflows/; integration_test/; android/; docs/",
+    "size": "G",
+    "reviewer": "gabrielblankk"
+  }
+]
