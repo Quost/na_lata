@@ -3,7 +3,6 @@ import '../core/models.dart';
 import 'clients/app_failure.dart';
 
 final Map<String, String> demoNicknames = {'demo-user': 'Você (demo)'};
-
 const demoProducts = [
   Product(
     barcode: 'demo-leite-1',
