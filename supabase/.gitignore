@@ -1,0 +1,4 @@
+# Arquivos gerados pelo Supabase CLI
+.branches
+.temp
+.env
