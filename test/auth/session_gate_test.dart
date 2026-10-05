@@ -7,6 +7,7 @@ import 'package:na_lata/data/demo_repositories.dart';
 import 'package:na_lata/data/open_food_facts_repository.dart';
 import 'package:na_lata/features/auth/session_controller.dart';
 import 'package:na_lata/features/auth/session_gate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'fake_auth.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
   late List<String> scopesCreated;
 
   Future<void> pumpGate(WidgetTester tester, {AuthIdentity? current}) async {
+    SharedPreferences.setMockInitialValues({});
     auth = FakeAuthRepository(current: current);
     session = SessionController(auth);
     scopesCreated = [];
