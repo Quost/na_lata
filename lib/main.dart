@@ -3,7 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/app_scope.dart';
 import 'core/app_config.dart';
+import 'core/navigation/deep_links.dart';
 import 'data/demo_repositories.dart';
+import 'data/demo_lists.dart';
+import 'data/list_repository.dart';
 import 'data/open_food_facts_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
@@ -31,15 +34,24 @@ Future<void> main() async {
         await client.request((db) => db.auth.signInAnonymously());
       }
     }
+    final products = demo ? DemoProducts() : SupabaseProducts(client!);
+    final lists = demo ? DemoListRepository() : SupabaseListRepository(client!);
     runApp(
       NaLataApp(
         scope: AppScope(
-          products: demo ? DemoProducts() : SupabaseProducts(client!),
+          products: products,
           reviews: demo ? DemoReviews() : SupabaseReviews(client!),
           community: demo ? DemoCommunity() : SupabaseCommunity(client!),
           openFoodFacts: HttpOpenFoodFactsRepository(),
           isDemo: demo,
           userId: demo ? 'demo-user' : client!.requireUserId,
+        ),
+        deepLinkResolver: DeepLinkResolver(
+          RepositoryDeepLinkContentSource(
+            products: products,
+            lists: lists,
+            backend: client,
+          ),
         ),
       ),
     );

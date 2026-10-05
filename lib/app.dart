@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'core/app_scope.dart';
+import 'core/navigation/deep_links.dart';
 import 'core/models.dart';
 import 'feature_registry.dart';
 import 'features/appearance/theme_controller.dart';
@@ -9,8 +11,15 @@ import 'features/history/history_feature.dart' show recordVisit;
 import 'design_system/na_lata_ui.dart';
 
 class NaLataApp extends StatelessWidget {
-  const NaLataApp({super.key, required this.scope});
+  const NaLataApp({
+    super.key,
+    required this.scope,
+    this.deepLinkResolver,
+    this.deepLinkPlatform = const AndroidDeepLinkPlatform(),
+  });
   final AppScope scope;
+  final DeepLinkResolver? deepLinkResolver;
+  final DeepLinkPlatform deepLinkPlatform;
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
     valueListenable: themeController,
@@ -20,26 +29,120 @@ class NaLataApp extends StatelessWidget {
       theme: NaTheme.light,
       darkTheme: NaTheme.dark,
       themeMode: mode,
-      home: HomePage(scope: scope),
+      home: HomePage(
+        scope: scope,
+        deepLinkResolver:
+            deepLinkResolver ??
+            DeepLinkResolver(
+              RepositoryDeepLinkContentSource(products: scope.products),
+            ),
+        deepLinkPlatform: deepLinkPlatform,
+      ),
     ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.scope});
+  const HomePage({
+    super.key,
+    required this.scope,
+    required this.deepLinkResolver,
+    required this.deepLinkPlatform,
+  });
   final AppScope scope;
+  final DeepLinkResolver deepLinkResolver;
+  final DeepLinkPlatform deepLinkPlatform;
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   int tab = 0;
+  StreamSubscription<String>? _deepLinkSubscription;
+  Future<void> _linkQueue = Future<void>.value();
+
+  @override
+  void initState() {
+    super.initState();
+    _deepLinkSubscription = widget.deepLinkPlatform.links.listen(
+      _enqueueDeepLink,
+      onError: (Object error) => _enqueueUnavailable(),
+    );
+    unawaited(_openInitialLink());
+  }
+
+  @override
+  void dispose() {
+    _deepLinkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _openInitialLink() async {
+    try {
+      final link = await widget.deepLinkPlatform.initialLink();
+      if (link != null) _enqueueDeepLink(link);
+    } on PlatformException {
+      _enqueueUnavailable();
+    }
+  }
+
+  void _enqueueDeepLink(String link) {
+    _linkQueue = _linkQueue.then((_) => _openDeepLink(link));
+  }
+
+  void _enqueueUnavailable() {
+    _linkQueue = _linkQueue.then((_) => _showUnavailable());
+  }
+
+  Future<void> _openDeepLink(String link) async {
+    DeepLinkDestination? destination;
+    try {
+      destination = await widget.deepLinkResolver.resolve(link);
+    } on Exception {
+      destination = null;
+    }
+    if (!mounted) return;
+    final page = switch (destination) {
+      ProductDestination(:final product) => ProductPage(
+        scope: widget.scope,
+        product: product,
+        deepLinkPlatform: widget.deepLinkPlatform,
+      ),
+      ProfileDestination(:final profile) => SharedProfilePage(
+        profile: profile,
+        deepLinkPlatform: widget.deepLinkPlatform,
+      ),
+      ListDestination(:final sharedList) => SharedListPage(
+        sharedList: sharedList,
+        deepLinkPlatform: widget.deepLinkPlatform,
+      ),
+      null => const ContentUnavailablePage(),
+    };
+    unawaited(
+      Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute<void>(builder: (_) => page)),
+    );
+  }
+
+  Future<void> _showUnavailable() async {
+    if (!mounted) return;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (_) => const ContentUnavailablePage()),
+      ),
+    );
+  }
 
   void openProduct(Product p) {
     unawaited(recordVisit(p, userId: widget.scope.userId));
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ProductPage(scope: widget.scope, product: p),
+        builder: (_) => ProductPage(
+          scope: widget.scope,
+          product: p,
+          deepLinkPlatform: widget.deepLinkPlatform,
+        ),
       ),
     );
   }
@@ -259,9 +362,15 @@ class _MyCornerTab extends StatelessWidget {
 }
 
 class ProductPage extends StatelessWidget {
-  const ProductPage({super.key, required this.scope, required this.product});
+  const ProductPage({
+    super.key,
+    required this.scope,
+    required this.product,
+    this.deepLinkPlatform = const AndroidDeepLinkPlatform(),
+  });
   final AppScope scope;
   final Product product;
+  final DeepLinkPlatform deepLinkPlatform;
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: scope,
@@ -273,7 +382,11 @@ class ProductPage extends StatelessWidget {
           unawaited(recordVisit(p, userId: scope.userId));
           Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => ProductPage(scope: scope, product: p),
+              builder: (_) => ProductPage(
+                scope: scope,
+                product: p,
+                deepLinkPlatform: deepLinkPlatform,
+              ),
             ),
           );
         },
@@ -282,7 +395,21 @@ class ProductPage extends StatelessWidget {
           features.firstWhere((t) => t.$1 == task).$3(args);
 
       return Scaffold(
-        appBar: AppBar(title: Text(product.name)),
+        appBar: AppBar(
+          title: Text(product.name),
+          actions: [
+            if (RegExp(r'^[0-9]{8,14}$').hasMatch(product.barcode))
+              IconButton(
+                tooltip: 'Compartilhar produto',
+                onPressed: () => _shareLink(
+                  context,
+                  deepLinkPlatform,
+                  DeepLinkRoute.product(product.barcode),
+                ),
+                icon: const Icon(Icons.share_outlined),
+              ),
+          ],
+        ),
         body: ListView(
           padding: NaSpace.page,
           children: [
@@ -316,6 +443,132 @@ class ProductPage extends StatelessWidget {
       );
     },
   );
+}
+
+class SharedProfilePage extends StatelessWidget {
+  const SharedProfilePage({
+    super.key,
+    required this.profile,
+    required this.deepLinkPlatform,
+  });
+
+  final SharedProfile profile;
+  final DeepLinkPlatform deepLinkPlatform;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Perfil'),
+      actions: [
+        IconButton(
+          tooltip: 'Compartilhar perfil',
+          onPressed: () => _shareLink(
+            context,
+            deepLinkPlatform,
+            DeepLinkRoute.profile(profile.id),
+          ),
+          icon: const Icon(Icons.share_outlined),
+        ),
+      ],
+    ),
+    body: ListView(
+      padding: NaSpace.page,
+      children: [
+        Text(
+          profile.nickname,
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+      ],
+    ),
+  );
+}
+
+class SharedListPage extends StatelessWidget {
+  const SharedListPage({
+    super.key,
+    required this.sharedList,
+    required this.deepLinkPlatform,
+  });
+
+  final SharedProductList sharedList;
+  final DeepLinkPlatform deepLinkPlatform;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(sharedList.list.name),
+      actions: [
+        IconButton(
+          tooltip: 'Compartilhar lista',
+          onPressed: () => _shareLink(
+            context,
+            deepLinkPlatform,
+            DeepLinkRoute.list(sharedList.list.id),
+          ),
+          icon: const Icon(Icons.share_outlined),
+        ),
+      ],
+    ),
+    body: ListView(
+      padding: NaSpace.page,
+      children: [
+        if (sharedList.list.description case final description?)
+          Text(description),
+        if (sharedList.barcodes.isEmpty)
+          const NaEmpty(
+            title: 'Lista vazia',
+            message: 'Esta lista ainda não tem produtos.',
+          )
+        else
+          for (final barcode in sharedList.barcodes)
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: Text('Código do produto'),
+              subtitle: Text(barcode),
+            ),
+      ],
+    ),
+  );
+}
+
+class ContentUnavailablePage extends StatelessWidget {
+  const ContentUnavailablePage({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Conteúdo indisponível')),
+    body: const Center(
+      child: Padding(
+        padding: NaSpace.page,
+        child: NaEmpty(
+          icon: Icons.link_off,
+          title: 'Não foi possível abrir este link',
+          message:
+              'O conteúdo pode ter sido removido, ser privado ou o link estar incorreto.',
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _shareLink(
+  BuildContext context,
+  DeepLinkPlatform platform,
+  Uri uri,
+) async {
+  String? message;
+  try {
+    await NativeShare(platform).share(uri);
+  } on PlatformException {
+    message = 'Não foi possível compartilhar este link.';
+  } on MissingPluginException {
+    message = 'O compartilhamento não está disponível neste dispositivo.';
+  }
+  if (message != null && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 class ErrorPanel extends StatelessWidget {
