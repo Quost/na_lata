@@ -1,3 +1,5 @@
+import 'dart:ui' show Size;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:na_lata/app.dart';
 import 'package:na_lata/core/app_scope.dart';
@@ -8,12 +10,18 @@ void main() {
   testWidgets('template abre catálogo e navega até produto fictício', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final scope = AppScope(
       products: DemoProducts(),
       reviews: DemoReviews(),
       community: DemoCommunity(),
+      brandFollows: DemoBrandFollows(),
       openFoodFacts: HttpOpenFoodFactsRepository(),
       isDemo: true,
+      isAuthenticated: true,
       userId: 'demo-user',
     );
     await tester.pumpWidget(NaLataApp(scope: scope));
