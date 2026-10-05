@@ -1,3 +1,7 @@
+import 'package_size.dart';
+
+export 'package_size.dart';
+
 class Product {
   const Product({
     required this.barcode,
@@ -5,11 +9,16 @@ class Product {
     this.brand,
     this.category,
     this.imageUrl,
+    this.packageSize,
     this.isDemo = false,
   });
   final String barcode;
   final String name;
   final String? brand, category, imageUrl;
+
+  /// Tamanho da embalagem; null quando desconhecido (produtos antigos, OFF
+  /// sem dado confiável ou texto ambíguo). Nunca entra em cálculo se null.
+  final PackageSize? packageSize;
   final bool isDemo;
 }
 

@@ -17,6 +17,7 @@ Cada módulo recebe `FeatureContext`: `scope` com repositórios e usuário atual
 | Product.brand | products.brand_key | Primeira marca da lista OFF, trim + minúsculas; null se ausente |
 | Product.category | products.category | Primeiro categories_tags informado; null se ausente |
 | Product.imageUrl | products.image_url | Pode ser null; UI trata erro de imagem |
+| Product.packageSize | products.package_quantity, package_unit, package_source | CAT03: quantidade > 0 (0,001 a 1.000.000), unidade g/kg/ml/l e origem `off_structured` ou `off_text`; as três colunas juntas ou todas null. null = desconhecido, nunca entra em cálculo; massa e volume não se convertem |
 | Review.userId | reviews.user_id | ID de auth, nunca apelido |
 | Review.nickname | profiles.nickname | Obter por relação profiles, não duplicar em reviews |
 | Review.rating | reviews.rating | Inteiro 1–5 |

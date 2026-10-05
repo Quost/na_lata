@@ -82,6 +82,23 @@ class _ProductCard extends StatelessWidget {
 
                 const SizedBox(height: NaSpace.sm),
 
+                // --- Tamanho da embalagem ---
+                _InfoRow(
+                  icon: Icons.straighten_outlined,
+                  label: 'Tamanho',
+                  value: product.packageSize?.label ?? 'Não informado',
+                ),
+                if (product.packageSize != null) ...[
+                  const SizedBox(height: NaSpace.sm),
+                  _InfoRow(
+                    icon: Icons.source_outlined,
+                    label: 'Origem do tamanho',
+                    value: _sizeSourceLabel(product.packageSize!.source),
+                  ),
+                ],
+
+                const SizedBox(height: NaSpace.sm),
+
                 // --- Barcode ---
                 _InfoRow(
                   icon: Icons.qr_code,
@@ -96,6 +113,11 @@ class _ProductCard extends StatelessWidget {
     );
   }
 }
+
+String _sizeSourceLabel(PackageSizeSource source) => switch (source) {
+  PackageSizeSource.offStructured => 'Open Food Facts (campo estruturado)',
+  PackageSizeSource.offText => 'Open Food Facts (texto da embalagem)',
+};
 
 /// Exibe a imagem do produto ou um placeholder quando a URL é nula ou falha.
 class _ProductImage extends StatelessWidget {
