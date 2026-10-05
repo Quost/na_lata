@@ -1,11 +1,9 @@
 import '../core/catalog_query.dart';
 import '../core/contracts.dart';
 import '../core/models.dart';
-import '../features/report/report_logic.dart';
-import '../features/sightings/sighting_logic.dart';
 import 'clients/app_failure.dart';
-import 'supabase_reviews.dart' show validateReviewDraft;
 
+final Map<String, String> demoNicknames = {'demo-user': 'Você (demo)'};
 const demoProducts = [
   Product(
     barcode: 'demo-leite-1',
@@ -298,11 +296,16 @@ class DemoCommunity implements CommunityRepository {
   }
 
   @override
-  Future<void> setNickname(String nickname) async {
-    final value = nickname.trim();
-    if (value.isEmpty) {
-      throw const AppFailure(FailureKind.validation, 'Digite um apelido.');
+    Future<void> setNickname(String nickname) async {
+      final value = nickname.trim();
+      if (value.isEmpty) {
+        // A UI (NicknameFeature) já valida antes de chamar o repositório, mas o
+        // fake não confia só nela — mesma postura defensiva do `SupabaseCommunity`.
+        throw const AppFailure(
+          FailureKind.validation,
+          'Apelido não pode ficar vazio.',
+        );
+      }
+      demoNicknames['demo-user'] = value;
     }
-    _nickname = value;
   }
-}

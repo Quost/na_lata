@@ -1,7 +1,6 @@
 // Autoria: Kauã Dal Santo (T23).
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
-import '../../core/contracts.dart';
 import '../../data/clients/app_failure.dart';
 
 const int kNicknameMin = 2;
@@ -59,8 +58,7 @@ class _NicknameFeatureState extends State<NicknameFeature> {
   void initState() {
     super.initState();
 
-    // Campo começa vazio: o apelido é a identidade escolhida, não o userId.
-    _controller = TextEditingController();
+    _controller = TextEditingController(text: widget.context.scope.userId);
   }
 
   @override
@@ -94,22 +92,11 @@ class _NicknameFeatureState extends State<NicknameFeature> {
         _success = 'Apelido atualizado!';
       });
     } on AppFailure catch (e) {
+      // ASSUMIDO: AppFailure tem `message` segura para exibir.
       if (!mounted) return;
       setState(() {
         _saving = false;
         _error = e.message;
-      });
-    } on FeaturePending catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = '$e';
-      });
-    } on Exception {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = 'Não foi possível salvar o apelido. Tente novamente.';
       });
     }
   }
@@ -129,7 +116,6 @@ class _NicknameFeatureState extends State<NicknameFeature> {
             onSubmitted: (_) => _save(),
             decoration: InputDecoration(
               labelText: 'Apelido',
-              hintText: 'Como você quer aparecer',
               helperText: '$kNicknameMin a $kNicknameMax caracteres',
               errorText: _error,
             ),
