@@ -6,11 +6,24 @@ class Product {
     this.category,
     this.imageUrl,
     this.isDemo = false,
+    this.source,
+    this.sourceUrl,
+    this.sourceFetchedAt,
   });
   final String barcode;
   final String name;
   final String? brand, category, imageUrl;
   final bool isDemo;
+
+  /// Origem dos dados (ver [ProductSource]); null em produtos anteriores ao
+  /// registro de origem, que não recebem data nem fonte retroativas.
+  final String? source;
+
+  /// Página do produto na fonte; só é exibida se passar em [safeSourceUri].
+  final String? sourceUrl;
+
+  /// Momento em que a fonte foi consultada; null quando desconhecido.
+  final DateTime? sourceFetchedAt;
 }
 
 class Review {

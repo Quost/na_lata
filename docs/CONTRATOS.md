@@ -19,6 +19,9 @@ A sessão é controlada por `SessionController` (`lib/features/auth/`) a partir 
 | Product.brand | products.brand_key | Primeira marca da lista OFF, trim + minúsculas; null se ausente |
 | Product.category | products.category | Primeiro categories_tags informado; null se ausente |
 | Product.imageUrl | products.image_url | Pode ser null; UI trata erro de imagem |
+| Product.source | products.source | `open_food_facts` ou null; null = origem não informada (produtos antigos, sem data retroativa) |
+| Product.sourceUrl | products.source_url | HTTPS em host openfoodfacts.org; a UI só exibe se passar em `safeSourceUri` |
+| Product.sourceFetchedAt | products.source_fetched_at | Momento da consulta ao OFF, em UTC; null se desconhecido |
 | Review.userId | reviews.user_id | ID de auth, nunca apelido |
 | Review.nickname | profiles.nickname | Obter por relação profiles, não duplicar em reviews |
 | Review.rating | reviews.rating | Inteiro 1–5 |
@@ -40,7 +43,7 @@ T15 implementa `moderateComment`; T09 chama esse helper ao exibir comentário. A
 
 ## Recursos locais e integração tardia
 
-T24 exporta `Future<void> recordVisit(Product product)` usando SharedPreferences. Após seu merge, o professor conecta uma chamada nos dois callbacks de abertura de produto de `app.dart`. Não registrar visitas em build.
+T24 exporta `Future<void> recordVisit(Product product, {required String userId})` usando SharedPreferences, com histórico separado por conta (`AppScope.userId`), limite de 50 e último acesso por produto. `app.dart` chama o helper nos dois callbacks de abertura de produto; nunca registrar visitas em build.
 
 T03 e T04 consultam `scope.products.byBarcode`, depois `scope.openFoodFacts.lookup`, importam e chamam `openProduct`. Na demonstração, scanner usa códigos reais e rede; catálogo fictício não simula uma resposta OFF. Para desenvolver sem rede, injetar fake de OFF em teste.
 

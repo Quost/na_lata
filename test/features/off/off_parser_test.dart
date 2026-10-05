@@ -8,6 +8,40 @@ Map<String, dynamic> fixture(String raw) =>
     jsonDecode(raw) as Map<String, dynamic>;
 
 void main() {
+  group('origem dos dados', () {
+    final fetchedAt = DateTime.utc(2026, 10, 5, 12, 30);
+
+    test('produto do OFF recebe fonte, link da página e data da consulta', () {
+      final product = parseOffProduct(
+        fixture(offFound),
+        '7891000100103',
+        fetchedAt: fetchedAt,
+      )!;
+      expect(product.source, 'open_food_facts');
+      expect(
+        product.sourceUrl,
+        'https://world.openfoodfacts.org/product/7891000100103',
+      );
+      expect(product.sourceFetchedAt, fetchedAt);
+    });
+
+    test('campos ausentes na resposta não impedem o registro da origem', () {
+      final product = parseOffProduct(
+        fixture(offIncomplete),
+        '7890000000024',
+        fetchedAt: fetchedAt,
+      )!;
+      expect(product.imageUrl, isNull);
+      expect(product.source, 'open_food_facts');
+      expect(product.sourceFetchedAt, fetchedAt);
+    });
+
+    test('sem data de consulta informada, a data fica desconhecida', () {
+      final product = parseOffProduct(fixture(offFound), '7891000100103')!;
+      expect(product.sourceFetchedAt, isNull);
+    });
+  });
+
   test(
     'produto encontrado vira Product com marca e categoria normalizadas',
     () {
