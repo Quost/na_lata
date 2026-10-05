@@ -1,12 +1,47 @@
 import 'package:flutter/material.dart';
-
 import '../../core/app_scope.dart';
+import '../../core/contracts.dart';
 import '../../core/models.dart';
+import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
+
+/// T12 · Filtrar por marca e categoria.
+///
+/// Monta a consulta preservando o texto de busca atual e combinando marca e
+/// categoria. Passar `null` em uma dimensão remove aquele filtro.
+ProductQuery buildFilterQuery({
+  required String text,
+  String? brand,
+  String? category,
+}) => ProductQuery(text: text, brand: brand, category: category);
+
+/// Opções distintas e ordenadas extraídas do catálogo. Marca/categoria
+/// ausentes ou em branco são ignoradas — não viram opção e não quebram nada.
+class FilterOptions {
+  const FilterOptions({required this.brands, required this.categories});
+  final List<String> brands;
+  final List<String> categories;
+  bool get isEmpty => brands.isEmpty && categories.isEmpty;
+}
+
+FilterOptions extractFilterOptions(List<Product> products) {
+  final brands = <String>{};
+  final categories = <String>{};
+  for (final product in products) {
+    final brand = product.brand?.trim();
+    if (brand != null && brand.isNotEmpty) brands.add(brand);
+    final category = product.category?.trim();
+    if (category != null && category.isNotEmpty) categories.add(category);
+  }
+  int byLabel(String a, String b) => a.toLowerCase().compareTo(b.toLowerCase());
+  return FilterOptions(
+    brands: brands.toList()..sort(byLabel),
+    categories: categories.toList()..sort(byLabel),
+  );
+}
 
 class FiltersFeature extends StatefulWidget {
   const FiltersFeature({super.key, required this.context});
-
   final FeatureContext context;
 
   @override
@@ -14,330 +49,210 @@ class FiltersFeature extends StatefulWidget {
 }
 
 class _FiltersFeatureState extends State<FiltersFeature> {
-  late final TextEditingController _textController;
-  late ProductQuery _query;
-  late Future<List<Product>> _catalogFuture;
-  late Future<List<Product>> _resultsFuture;
+  FilterOptions? _options;
+  String? _error;
+  int _generation = 0;
+
+  AppScope get _scope => widget.context.scope;
 
   @override
   void initState() {
     super.initState();
-    _query = widget.context.scope.query;
-    _textController = TextEditingController(text: _query.text);
-    _catalogFuture = _loadCatalog();
-    _resultsFuture = _loadResults(_query);
-  }
-
-  @override
-  void didUpdateWidget(covariant FiltersFeature oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final scope = widget.context.scope;
-    final scopeChanged = !identical(oldWidget.context.scope, scope);
-    if (scopeChanged) {
-      _catalogFuture = _loadCatalog();
-    }
-
-    final updatedQuery = scope.query;
-    final queryChanged = !_sameQuery(updatedQuery, _query);
-    if (queryChanged) {
-      _textController.value = TextEditingValue(
-        text: updatedQuery.text,
-        selection: TextSelection.collapsed(offset: updatedQuery.text.length),
-      );
-    }
-    if (scopeChanged || queryChanged) {
-      _query = updatedQuery;
-      _resultsFuture = _loadResults(updatedQuery);
-    }
+    // Redesenha para refletir a seleção atual de scope.query (inclusive quando
+    // o Catálogo muda o texto ou outro módulo limpa os filtros).
+    _scope.addListener(_onScopeChanged);
+    _fetch(_generation);
   }
 
   @override
   void dispose() {
-    _textController.dispose();
+    _scope.removeListener(_onScopeChanged);
     super.dispose();
   }
 
-  Future<List<Product>> _loadCatalog() => Future<List<Product>>.sync(
-        () => widget.context.scope.products.search(const ProductQuery()),
+  void _onScopeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _reload() {
+    final generation = ++_generation;
+    setState(() {
+      _options = null;
+      _error = null;
+    });
+    _fetch(generation);
+  }
+
+  Future<void> _fetch(int generation) async {
+    try {
+      // Universo de opções: catálogo inteiro, sem texto nem filtros.
+      final products = await _scope.products.search(const ProductQuery());
+      if (!mounted || generation != _generation) return;
+      setState(() => _options = extractFilterOptions(products));
+    } on AppFailure catch (e) {
+      _fail(e.message, generation);
+    } on FeaturePending catch (e) {
+      _fail('$e', generation);
+    } on Exception {
+      _fail(
+        'Não foi possível carregar os filtros. Tente novamente.',
+        generation,
+      );
+    }
+  }
+
+  void _fail(String message, int generation) {
+    if (!mounted || generation != _generation) return;
+    setState(() => _error = message);
+  }
+
+  void _apply({String? brand, String? category}) => _scope.setQuery(
+    buildFilterQuery(text: _scope.query.text, brand: brand, category: category),
   );
 
-  Future<List<Product>> _loadResults(ProductQuery query) =>
-      Future<List<Product>>.sync(
-            () => widget.context.scope.products.search(query),
-      );
-
-  bool _sameQuery(ProductQuery first, ProductQuery second) =>
-      first.text == second.text &&
-          first.brand == second.brand &&
-          first.category == second.category;
-
-  void _updateQuery({
-    String? text,
-    String? brand,
-    String? category,
-    bool clearBrand = false,
-    bool clearCategory = false,
-  }) {
-    final next = ProductQuery(
-      text: text ?? _query.text,
-      brand: clearBrand ? null : brand ?? _query.brand,
-      category: clearCategory ? null : category ?? _query.category,
-    );
-    if (_sameQuery(next, _query)) return;
-
-    setState(() {
-      _query = next;
-      _resultsFuture = _loadResults(next);
-    });
-    widget.context.scope.setQuery(next);
-  }
-
-  void _clearFilters() {
-    _textController.clear();
-    _updateQuery(text: '', clearBrand: true, clearCategory: true);
-  }
-
-  void _retryCatalog() {
-    setState(() => _catalogFuture = _loadCatalog());
-  }
-
-  void _retryResults() {
-    setState(() => _resultsFuture = _loadResults(_query));
-  }
+  void _clear() => _scope.setQuery(buildFilterQuery(text: _scope.query.text));
 
   @override
-  Widget build(BuildContext context) => NaContent(
-    child: Column(
+  Widget build(BuildContext context) {
+    final query = _scope.query;
+    final activeCount =
+        (query.brand != null ? 1 : 0) + (query.category != null ? 1 : 0);
+    return NaSection(
+      title: 'Filtrar por marca e categoria',
+      description:
+          'Combine marca e categoria com a busca do Catálogo. Toque de novo '
+          'em um filtro para removê-lo.',
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: ExpansionTile(
+          leading: const Icon(Icons.filter_alt_outlined),
+          title: Text(
+            activeCount == 0
+                ? 'Nenhum filtro aplicado'
+                : '$activeCount filtro${activeCount == 1 ? '' : 's'} ativo'
+                      '${activeCount == 1 ? '' : 's'}',
+          ),
+          subtitle: Text(
+            _describeSelection(query),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Mantém aberto quando há filtro ativo, para dar visibilidade.
+          initiallyExpanded: activeCount > 0,
+          childrenPadding: const EdgeInsets.fromLTRB(
+            NaSpace.lg,
+            0,
+            NaSpace.lg,
+            NaSpace.lg,
+          ),
+          children: [_body(context)],
+        ),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    if (_error != null) return NaError(message: _error!, onRetry: _reload);
+    final options = _options;
+    if (options == null) return const NaLoading(label: 'Carregando filtros…');
+    if (options.isEmpty) {
+      return const NaEmpty(
+        title: 'Nada para filtrar',
+        message: 'O catálogo ainda não tem marcas ou categorias cadastradas.',
+        icon: Icons.filter_alt_off_outlined,
+      );
+    }
+    final query = _scope.query;
+    final theme = Theme.of(context);
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NaSection(
-          title: 'Filtrar produtos',
-          description:
-          'Combine busca, marca e categoria. As opções vêm do catálogo.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.context.product case final product?)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Produto em contexto: ${product.name}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                )
-              else
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    'Nenhum produto selecionado. Os filtros continuam disponíveis para todo o catálogo.',
-                  ),
-                ),
-              TextField(
-                controller: _textController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar produto',
-                  hintText: 'Digite o nome do produto',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.search,
-                onChanged: (value) => _updateQuery(text: value.trim()),
-              ),
-              const SizedBox(height: 12),
-              FutureBuilder<List<Product>>(
-                future: _catalogFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return NaError(
-                      message: '${snapshot.error}',
-                      onRetry: _retryCatalog,
-                    );
-                  }
-                  if (!snapshot.hasData) {
-                    return const NaLoading(label: 'Carregando opções…');
-                  }
-
-                  final options = FilterOptions.fromProducts(snapshot.data!);
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        initialValue: _dropdownValue(
-                          _query.brand,
-                          options.brands,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Marca',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Todas as marcas'),
-                          ),
-                          ...options.brands.map(
-                                (brand) => DropdownMenuItem<String>(
-                              value: brand,
-                              child: Text(brand),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) => _updateQuery(
-                          brand: value,
-                          clearBrand: value == null,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: _dropdownValue(
-                          _query.category,
-                          options.categories,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Categoria',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('Todas as categorias'),
-                          ),
-                          ...options.categories.map(
-                                (category) => DropdownMenuItem<String>(
-                              value: category,
-                              child: Text(category),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) => _updateQuery(
-                          category: value,
-                          clearCategory: value == null,
-                        ),
-                      ),
-                      if (options.brands.isEmpty ||
-                          options.categories.isEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          _optionsEmptyMessage(options),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _query.text.isEmpty &&
-                      _query.brand == null &&
-                      _query.category == null
-                      ? null
-                      : _clearFilters,
-                  icon: const Icon(Icons.clear_all),
-                  label: const Text('Limpar filtros'),
-                ),
-              ),
-            ],
+        if (options.brands.isNotEmpty) ...[
+          Text('Marca', style: theme.textTheme.titleSmall),
+          const SizedBox(height: NaSpace.sm),
+          _ChipGroup(
+            dimension: 'marca',
+            values: options.brands,
+            selected: query.brand,
+            onChanged: (brand) =>
+                _apply(brand: brand, category: query.category),
           ),
+          const SizedBox(height: NaSpace.lg),
+        ],
+        if (options.categories.isNotEmpty) ...[
+          Text('Categoria', style: theme.textTheme.titleSmall),
+          const SizedBox(height: NaSpace.sm),
+          _ChipGroup(
+            dimension: 'categoria',
+            values: options.categories,
+            selected: query.category,
+            onChanged: (category) =>
+                _apply(brand: query.brand, category: category),
+          ),
+          const SizedBox(height: NaSpace.lg),
+        ],
+        Text(
+          _describeSelection(query),
+          style: theme.textTheme.bodySmall?.copyWith(color: NaColors.muted),
         ),
-        NaSection(
-          title: 'Resultados',
-          description: _queryDescription(_query),
-          child: FutureBuilder<List<Product>>(
-            future: _resultsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return NaError(
-                  message: '${snapshot.error}',
-                  onRetry: _retryResults,
-                );
-              }
-              if (!snapshot.hasData) {
-                return const NaLoading(label: 'Buscando produtos…');
-              }
-              if (snapshot.data!.isEmpty) {
-                return NaEmpty(
-                  title: 'Nenhum produto encontrado',
-                  message: _query.text.isEmpty &&
-                      _query.brand == null &&
-                      _query.category == null
-                      ? 'O catálogo está vazio.'
-                      : 'Tente ajustar a busca ou limpar os filtros.',
-                  action: TextButton(
-                    onPressed: _clearFilters,
-                    child: const Text('Limpar filtros'),
-                  ),
-                );
-              }
-
-              return Column(
-                children: snapshot.data!
-                    .map(
-                      (product) => NaItemCard(
-                    title: product.name,
-                    subtitle:
-                    '${_displayValue(product.brand, 'Marca não informada')} • '
-                        '${_displayValue(product.category, 'Sem categoria')}',
-                    onTap: () => widget.context.openProduct(product),
-                  ),
-                )
-                    .toList(),
-              );
-            },
+        const SizedBox(height: NaSpace.sm),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: query.brand == null && query.category == null
+                ? null
+                : _clear,
+            icon: const Icon(Icons.filter_alt_off_outlined),
+            label: const Text('Limpar filtros'),
           ),
         ),
       ],
-    ),
-  );
-
-  String? _dropdownValue(String? selected, List<String> options) =>
-      selected != null && options.contains(selected) ? selected : null;
-
-  String _displayValue(String? value, String fallback) =>
-      value == null || value.trim().isEmpty ? fallback : value.trim();
-
-  String _optionsEmptyMessage(FilterOptions options) {
-    if (options.brands.isEmpty && options.categories.isEmpty) {
-      return 'O catálogo ainda não tem marcas ou categorias informadas.';
-    }
-    return options.brands.isEmpty
-        ? 'O catálogo ainda não tem marcas informadas.'
-        : 'O catálogo ainda não tem categorias informadas.';
-  }
-
-  String _queryDescription(ProductQuery query) {
-    final activeFilters = <String>[];
-    if (query.text.isNotEmpty) activeFilters.add('busca: "${query.text}"');
-    if (query.brand != null) activeFilters.add('marca: ${query.brand}');
-    if (query.category != null) {
-      activeFilters.add('categoria: ${query.category}');
-    }
-    return activeFilters.isEmpty
-        ? 'Todos os produtos do catálogo'
-        : activeFilters.join(' · ');
-  }
-}
-
-class FilterOptions {
-  const FilterOptions({required this.brands, required this.categories});
-
-  factory FilterOptions.fromProducts(Iterable<Product> products) {
-    final brands = <String>{};
-    final categories = <String>{};
-    for (final product in products) {
-      final brand = product.brand?.trim();
-      final category = product.category?.trim();
-      if (brand != null && brand.isNotEmpty) brands.add(brand);
-      if (category != null && category.isNotEmpty) categories.add(category);
-    }
-    return FilterOptions(
-      brands: (brands.toList()..sort()),
-      categories: (categories.toList()..sort()),
     );
   }
 
-  final List<String> brands;
-  final List<String> categories;
+  String _describeSelection(ProductQuery query) {
+    final active = [
+      if (query.brand != null) 'marca ${query.brand}',
+      if (query.category != null) 'categoria ${query.category}',
+    ];
+    final search = query.text.trim();
+    if (active.isEmpty) {
+      return search.isEmpty
+          ? 'Nenhum filtro aplicado. Mostrando todo o catálogo.'
+          : 'Nenhum filtro aplicado. Mantendo a busca “$search”.';
+    }
+    final base = 'Filtrando por ${active.join(' e ')}';
+    return search.isEmpty ? '$base.' : '$base, junto da busca “$search”.';
+  }
+}
+
+class _ChipGroup extends StatelessWidget {
+  const _ChipGroup({
+    required this.dimension,
+    required this.values,
+    required this.selected,
+    required this.onChanged,
+  });
+  final String dimension;
+  final List<String> values;
+  final String? selected;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: NaSpace.sm,
+    runSpacing: NaSpace.sm,
+    children: [
+      for (final value in values)
+        FilterChip(
+          label: Text(value),
+          tooltip: selected == value
+              ? 'Remover filtro de $dimension $value'
+              : 'Filtrar por $dimension $value',
+          selected: selected == value,
+          onSelected: (isSelected) => onChanged(isSelected ? value : null),
+        ),
+    ],
+  );
 }

@@ -1,6 +1,6 @@
 # Design system · Na Lata
 
-**Ver no app:** ícone de paleta na barra superior → galeria interativa. **Importar:**
+**Referência visual:** os componentes estão reunidos em `lib/design_system/gallery.dart`. **Importar:**
 
 ```dart
 import 'package:na_lata/design_system/na_lata_ui.dart';
@@ -48,7 +48,7 @@ NaSection(
 )
 ```
 
-A galeria demonstra apenas aparência. Não valida avaliações, não calcula médias, não consulta banco nem resolve as issues. O formulário de estrelas, validações e persistência continuam a cargo dos alunos.
+A galeria demonstra aparência e interações visuais mínimas. Não valida avaliações, não calcula médias, não consulta banco nem resolve as issues. O formulário de estrelas, validações e persistência continuam a cargo dos alunos.
 
 ## Acessibilidade e estados
 

@@ -128,7 +128,9 @@ void main() {
       );
       addTearDown(sdk.dispose);
       await sdk.auth.signUp(email: 'test@example.com', password: 'password');
-      final repository = SupabaseBrandFollows(BackendClient(sdk));
+      final client = BackendClient(sdk);
+      expect(client.isAuthenticated, isTrue);
+      final repository = SupabaseBrandFollows(client);
 
       expect(await repository.isFollowing(' BRAND-A '), isTrue);
       expect(await repository.followingBrands(), ['brand-a', 'brand-b']);
@@ -176,6 +178,7 @@ void main() {
     );
     addTearDown(sdk.dispose);
     final client = BackendClient(sdk);
+    expect(client.isAuthenticated, isFalse);
     final repository = SupabaseBrandFollows(client);
 
     await expectLater(
@@ -207,7 +210,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('fazenda aurora'));
+    await tester.tap(find.text('Fazenda Aurora'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Seguir marca'));
     await tester.pumpAndSettle();
@@ -239,7 +242,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('fazenda aurora'));
+    await tester.tap(find.text('Fazenda Aurora'));
     await tester.pumpAndSettle();
 
     final button = find.widgetWithText(FilledButton, 'Seguir marca');

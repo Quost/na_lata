@@ -10,9 +10,11 @@ import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
 import 'data/clients/backend_client.dart';
+import 'features/appearance/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await themeController.load();
   try {
     final config = AppConfig.fromEnvironment();
     config.validate();
@@ -41,7 +43,7 @@ Future<void> main() async {
               : SupabaseBrandFollows(client!),
           openFoodFacts: HttpOpenFoodFactsRepository(),
           isDemo: demo,
-          isAuthenticated: demo || !client!.isAnonymous,
+          isAuthenticated: demo || client!.isAuthenticated,
           userId: demo ? 'demo-user' : client!.requireUserId,
         ),
       ),

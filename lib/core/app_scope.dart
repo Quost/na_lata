@@ -7,12 +7,12 @@ class AppScope extends ChangeNotifier {
     required this.products,
     required this.reviews,
     required this.community,
-    required this.brandFollows,
+    BrandFollowRepository? brandFollows,
     required this.openFoodFacts,
     required this.isDemo,
-    required this.isAuthenticated,
+    this.isAuthenticated = true,
     required this.userId,
-  });
+  }) : brandFollows = brandFollows ?? const _PendingBrandFollows();
   final ProductRepository products;
   final ReviewRepository reviews;
   final CommunityRepository community;
@@ -30,6 +30,24 @@ class AppScope extends ChangeNotifier {
   }
 }
 
+class _PendingBrandFollows implements BrandFollowRepository {
+  const _PendingBrandFollows();
+
+  @override
+  Future<bool> isFollowing(String brandKey) async =>
+      throw const FeaturePending('MAR03 — seguir marcas');
+
+  @override
+  Future<List<String>> followingBrands() async =>
+      throw const FeaturePending('MAR03 — seguir marcas');
+
+  @override
+  Future<void> setFollowing({
+    required String brandKey,
+    required bool isFollowing,
+  }) async => throw const FeaturePending('MAR03 — seguir marcas');
+}
+
 class FeatureContext {
   const FeatureContext({
     required this.scope,
@@ -39,31 +57,4 @@ class FeatureContext {
   final AppScope scope;
   final Product? product;
   final void Function(Product) openProduct;
-}
-
-class FeaturePlaceholder extends StatelessWidget {
-  const FeaturePlaceholder({
-    super.key,
-    required this.task,
-    required this.title,
-  });
-  final String task, title;
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          const Icon(Icons.construction_outlined),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '$title\nEntrega $task — implemente este módulo',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }

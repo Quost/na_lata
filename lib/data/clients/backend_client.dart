@@ -12,6 +12,8 @@ class BackendClient {
   final Duration timeout;
 
   bool get isAnonymous => _supabase.auth.currentUser?.isAnonymous ?? true;
+  bool get isAuthenticated =>
+      _supabase.auth.currentUser?.emailConfirmedAt != null && !isAnonymous;
 
   String get requireUserId {
     final id = _supabase.auth.currentUser?.id;

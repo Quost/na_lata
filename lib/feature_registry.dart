@@ -24,6 +24,7 @@ import 'features/minimum_rating/minimum_rating_feature.dart';
 import 'features/sightings/sightings_feature.dart';
 import 'features/nickname/nickname_feature.dart';
 import 'features/history/history_feature.dart';
+import 'features/appearance/appearance_feature.dart';
 
 typedef FeatureBuilder = Widget Function(FeatureContext);
 final List<(String, String, FeatureBuilder)> features = [
@@ -143,4 +144,5 @@ final List<(String, String, FeatureBuilder)> features = [
     'Guardar histórico de produtos vistos',
     (FeatureContext c) => HistoryFeature(context: c),
   ),
+  ('T26', 'Aparência', (FeatureContext c) => AppearanceFeature(context: c)),
 ];

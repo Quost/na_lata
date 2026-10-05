@@ -1,9 +1,20 @@
+import 'catalog_query.dart';
 import 'models.dart';
 
 abstract interface class ProductRepository {
   Future<List<Product>> search(ProductQuery query);
   Future<Product?> byBarcode(String barcode);
   Future<void> importProduct(Product product);
+}
+
+/// Catálogo paginado da nova jornada; convive com [ProductRepository.search]
+/// até a migração dos consumidores.
+abstract interface class CatalogRepository {
+  Future<PageResult<Product>> page(
+    CatalogQuery query, {
+    CatalogCursor? after,
+    int limit = 20,
+  });
 }
 
 abstract interface class OpenFoodFactsRepository {
