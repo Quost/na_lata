@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'contracts.dart';
 import 'models.dart';
+import 'notification_contracts.dart';
 
 class AppScope extends ChangeNotifier {
   AppScope({
@@ -10,6 +11,7 @@ class AppScope extends ChangeNotifier {
     required this.openFoodFacts,
     required this.isDemo,
     required this.userId,
+    this.notificationPreferences,
   });
   final ProductRepository products;
   final ReviewRepository reviews;
@@ -17,6 +19,8 @@ class AppScope extends ChangeNotifier {
   final OpenFoodFactsRepository openFoodFacts;
   final bool isDemo;
   final String userId;
+
+  final NotificationPreferencesRepository? notificationPreferences;
   ProductQuery query = const ProductQuery();
   final Set<String> comparison = {};
   void refresh() => notifyListeners();

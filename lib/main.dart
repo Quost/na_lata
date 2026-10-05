@@ -4,6 +4,7 @@ import 'app.dart';
 import 'core/app_scope.dart';
 import 'core/app_config.dart';
 import 'data/demo_repositories.dart';
+import 'data/notification_repository.dart';
 import 'data/open_food_facts_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
@@ -40,6 +41,9 @@ Future<void> main() async {
           openFoodFacts: HttpOpenFoodFactsRepository(),
           isDemo: demo,
           userId: demo ? 'demo-user' : client!.requireUserId,
+          notificationPreferences: demo
+              ? DemoNotificationPreferences()
+              : SupabaseNotificationPreferences(client!),
         ),
       ),
     );
