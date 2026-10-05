@@ -6,6 +6,12 @@ abstract interface class ProductRepository {
   Future<void> importProduct(Product product);
 }
 
+abstract interface class BrandRepository {
+  /// Marcas cujo nome contém [text], ignorando bordas, caixa e acentos,
+  /// em ordem de brand_key. [after] é o `nextAfter` da página anterior.
+  Future<BrandPage> search(String text, {String? after, int limit = 20});
+}
+
 abstract interface class OpenFoodFactsRepository {
   Future<Product?> lookup(String barcode);
 }

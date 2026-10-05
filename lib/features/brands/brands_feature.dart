@@ -5,6 +5,7 @@ import '../../core/contracts.dart';
 import '../../core/models.dart';
 import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
+import 'brand_search.dart';
 
 /// Marca com seus produtos e a nota geral agregada.
 class BrandStat {
@@ -186,21 +187,13 @@ class _BrandsFeatureState extends State<BrandsFeature> {
       );
     }
     final selected = _find(brands, _selected);
-    return selected == null ? _brandList(brands) : _brandDetail(selected);
+    return selected == null
+        ? BrandSearch(
+            repository: _scope.brands,
+            onSelect: (brand) => setState(() => _selected = brand.key),
+          )
+        : _brandDetail(selected);
   }
-
-  Widget _brandList(List<BrandStat> brands) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      for (final stat in brands)
-        NaItemCard(
-          leading: const Icon(Icons.storefront_outlined, color: NaColors.amber),
-          title: stat.brand,
-          subtitle: _describeBrand(stat),
-          onTap: () => setState(() => _selected = stat.brand),
-        ),
-    ],
-  );
 
   Widget _brandDetail(BrandStat stat) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,

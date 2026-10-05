@@ -1,6 +1,7 @@
 import '../core/contracts.dart';
 import '../core/models.dart';
 import '../features/report/report_logic.dart';
+import 'brand_repository.dart';
 import '../features/sightings/sighting_logic.dart';
 import 'clients/app_failure.dart';
 import 'supabase_reviews.dart' show validateReviewDraft;
@@ -71,6 +72,33 @@ class DemoProducts implements ProductRepository {
   @override
   Future<void> importProduct(Product product) async {
     if (!_items.any((p) => p.barcode == product.barcode)) _items.add(product);
+  }
+}
+
+/// Diretório de marcas em memória, derivado de um [ProductRepository].
+class DemoBrands implements BrandRepository {
+  DemoBrands(this.products);
+  final ProductRepository products;
+
+  @override
+  Future<BrandPage> search(String text, {String? after, int limit = 20}) async {
+    checkBrandPageLimit(limit);
+    final query = brandSearchKey(text);
+    final barcodes = <String, Set<String>>{};
+    for (final p in await products.search(const ProductQuery())) {
+      final key = p.brand?.trim() ?? '';
+      if (key.isEmpty || !brandSearchKey(key).contains(query)) continue;
+      barcodes.putIfAbsent(key, () => {}).add(p.barcode);
+    }
+    final keys =
+        barcodes.keys
+            .where((k) => after == null || k.compareTo(after) > 0)
+            .toList()
+          ..sort();
+    return brandPageOf([
+      for (final key in keys.take(limit + 1))
+        Brand(key: key, productCount: barcodes[key]!.length),
+    ], limit);
   }
 }
 
