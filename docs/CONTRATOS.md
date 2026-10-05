@@ -38,7 +38,7 @@ T15 implementa `moderateComment`; T09 chama esse helper ao exibir comentário. A
 
 ## Recursos locais e integração tardia
 
-T24 exporta `Future<void> recordVisit(Product product)` usando SharedPreferences. Após seu merge, o professor conecta uma chamada nos dois callbacks de abertura de produto de `app.dart`. Não registrar visitas em build.
+T24 exporta `Future<void> recordVisit(Product product, {required String userId})` usando SharedPreferences, com histórico separado por conta (`AppScope.userId`), limite de 50 e último acesso por produto. `app.dart` chama o helper nos dois callbacks de abertura de produto; nunca registrar visitas em build.
 
 T03 e T04 consultam `scope.products.byBarcode`, depois `scope.openFoodFacts.lookup`, importam e chamam `openProduct`. Na demonstração, scanner usa códigos reais e rede; catálogo fictício não simula uma resposta OFF. Para desenvolver sem rede, injetar fake de OFF em teste.
 
