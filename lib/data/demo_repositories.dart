@@ -1,5 +1,8 @@
 import '../core/contracts.dart';
 import '../core/models.dart';
+import 'clients/app_failure.dart';
+
+final Map<String, String> demoNicknames = {'demo-user': 'Você (demo)'};
 
 const demoProducts = [
   Product(
@@ -120,9 +123,16 @@ class DemoCommunity implements CommunityRepository {
   Future<void> addSighting(Sighting sighting) async =>
       throw const FeaturePending('T22 — onde encontrei');
   @override
-  Future<void> setNickname(String nickname) async {
-    final value = nickname.trim();
-
-    // T23 — apelido
+    Future<void> setNickname(String nickname) async {
+      final value = nickname.trim();
+      if (value.isEmpty) {
+        // A UI (NicknameFeature) já valida antes de chamar o repositório, mas o
+        // fake não confia só nela — mesma postura defensiva do `SupabaseCommunity`.
+        throw const AppFailure(
+          FailureKind.validation,
+          'Apelido não pode ficar vazio.',
+        );
+      }
+      demoNicknames['demo-user'] = value;
+    }
   }
-}
