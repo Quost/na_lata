@@ -119,7 +119,8 @@ class SupabaseCommunity implements CommunityRepository {
           .from('profiles')
           .update({'nickname': value})
           .eq('id', userId)
-          .select(),
+          // Só o id: profiles tem leitura por coluna (PER01).
+          .select('id'),
     );
     // UPDATE que afeta 0 linhas não lança erro: conferir o retorno.
     if ((rows as List).isEmpty) {

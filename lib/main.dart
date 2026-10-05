@@ -6,6 +6,7 @@ import 'core/app_config.dart';
 import 'data/auth_repository.dart';
 import 'data/demo_repositories.dart';
 import 'data/open_food_facts_repository.dart';
+import 'data/brand_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
@@ -33,6 +34,7 @@ Future<void> main() async {
     final products = demo ? DemoProducts() : SupabaseProducts(client!);
     final reviews = demo ? DemoReviews() : SupabaseReviews(client!);
     final community = demo ? DemoCommunity() : SupabaseCommunity(client!);
+    final brands = demo ? null : SupabaseBrands(client!);
     final openFoodFacts = HttpOpenFoodFactsRepository();
     // A sessão (anônima ou conta) é controlada pelo SessionController; o
     // escopo é recriado a cada troca de usuário.
@@ -47,6 +49,7 @@ Future<void> main() async {
           products: products,
           reviews: reviews,
           community: community,
+          brands: brands,
           openFoodFacts: openFoodFacts,
           isDemo: demo,
           userId: userId,

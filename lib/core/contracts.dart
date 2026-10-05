@@ -7,6 +7,12 @@ abstract interface class ProductRepository {
   Future<void> importProduct(Product product);
 }
 
+abstract interface class BrandRepository {
+  /// Marcas cujo nome contém [text], ignorando bordas, caixa e acentos,
+  /// em ordem de brand_key. [after] é o `nextAfter` da página anterior.
+  Future<BrandPage> search(String text, {String? after, int limit = 20});
+}
+
 /// Catálogo paginado da nova jornada; convive com [ProductRepository.search]
 /// até a migração dos consumidores.
 abstract interface class CatalogRepository {

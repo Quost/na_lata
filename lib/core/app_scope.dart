@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/demo_repositories.dart' show DemoBrands;
 import 'contracts.dart';
 import 'models.dart';
 
@@ -10,11 +11,15 @@ class AppScope extends ChangeNotifier {
     required this.openFoodFacts,
     required this.isDemo,
     required this.userId,
-  });
+    BrandRepository? brands,
+  }) : brands = brands ?? DemoBrands(products);
   final ProductRepository products;
   final ReviewRepository reviews;
   final CommunityRepository community;
   final OpenFoodFactsRepository openFoodFacts;
+
+  /// Sem injeção explícita, as marcas são derivadas de [products].
+  final BrandRepository brands;
   final bool isDemo;
   final String userId;
   ProductQuery query = const ProductQuery();

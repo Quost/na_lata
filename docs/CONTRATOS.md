@@ -26,10 +26,12 @@ A sessão é controlada por `SessionController` (`lib/features/auth/`) a partir 
 | Review.nickname | profiles.nickname | Obter por relação profiles, não duplicar em reviews |
 | Review.rating | reviews.rating | Inteiro 1–5 |
 | Review.comment | reviews.comment | Até 500 caracteres, opcional |
+| PublicProfile.nickname | profiles.nickname | 2–40 caracteres após trim |
+| PublicProfile.bio | profiles.bio | Opcional, até 160 caracteres; null quando vazia |
 
 Categorias reais são os identificadores fornecidos pelo OFF; o protótipo não resolve taxonomia/tradução completa. Produtos fictícios usam categorias legíveis e códigos `demo-*`; não devem ser importados no banco real.
 
-`reviews` tem unicidade `(barcode,user_id)`. Usar upsert com essas colunas; não enviar `id`, `created_at` ou `updated_at` no update. `profiles` nasce por trigger do auth. Favoritos e denúncias têm unicidade por usuário e alvo.
+`reviews` tem unicidade `(barcode,user_id)`. Usar upsert com essas colunas; não enviar `id`, `created_at` ou `updated_at` no update. `profiles` nasce por trigger do auth. O perfil público (PER01) é lido e editado por `ProfileRepository` em `lib/data/profile_repository.dart`: pedir sempre `publicProfileColumns` (id, nickname, bio), nunca `select(*)`. A tabela tem leitura e edição por coluna; campo novo em `profiles` precisa de grant próprio na migração e só entra em `PublicProfile` se for público. Preferências privadas ficam em outro modelo. Favoritos e denúncias têm unicidade por usuário e alvo.
 
 T08 implementa leitura/gravação e T17 depois implementa exclusão no mesmo repositório. T18/T19/T22/T23 editam métodos distintos em `supabase_community.dart`: sincronizar antes de começar e resolver conflitos preservando os métodos dos colegas. As tasks correspondentes também completam o fake para permitir demonstração sem rede.
 

@@ -1,22 +1,103 @@
 name: Flutter
+# A pipeline deve falhar cedo quando uma entrega não é rastreável.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
-  verify:
+  guard:
+    name: guard (segredos e regras do projeto)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: bash scripts/guard.sh
+      - name: Gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks detect --redact --no-banner --log-opts="origin/${{ github.base_ref }}..HEAD"
+      - name: Migrations já aplicadas não podem ser editadas
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          changed=$(git diff --diff-filter=MDR --name-only "origin/${{ github.base_ref }}"...HEAD -- supabase/migrations)
+          if [ -n "$changed" ]; then echo "::error::Migrations existentes não podem ser alteradas/removidas; crie uma nova:"; echo "$changed"; exit 1; fi
+      - name: PR referencia issue
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "$BODY" | grep -qiE "(closes|fixes|resolves) #[0-9]+" || { echo "::error::PR precisa de 'Closes #NUMERO'."; exit 1; }
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.5'
           channel: stable
           cache: true
-      - run: flutter pub get
+      - run: flutter pub get --enforce-lockfile
       - run: dart format --output=none --set-exit-if-changed lib test tool
-      - run: flutter analyze
-      - run: flutter test
+      - run: flutter analyze --fatal-infos --fatal-warnings
+      - run: flutter test --coverage --test-randomize-ordering-seed random
+      - name: Cobertura mínima
+        run: |
+          total=$(grep -c '^DA:' coverage/lcov.info); hit=$(grep '^DA:' coverage/lcov.info | grep -vc ',0$')
+          pct=$((100*hit/total)); echo "cobertura: $pct%"
+          [ "$pct" -ge 40 ] || { echo "::error::Cobertura abaixo de 40% ($pct%)"; exit 1; }
+  android-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Só builda se android/pubspec mudou
+        id: gate
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -qE '^(android/|pubspec\.(yaml|lock))'; then echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - if: steps.gate.outputs.run == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          channel: stable
+          cache: true
+      - if: steps.gate.outputs.run == 'true'
+        run: flutter pub get --enforce-lockfile
+      - if: steps.gate.outputs.run == 'true'
+        run: flutter build apk --debug
+  supabase:
+    name: supabase (migrations + RLS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Sobe banco local e aplica todas as migrations
+        run: supabase db start
+      - name: Testes de RLS
+        run: |
+          for f in supabase/tests/*.sql; do
+            echo "== $f"
+            PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f "$f"
+          done
