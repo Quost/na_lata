@@ -17,6 +17,9 @@ Cada módulo recebe `FeatureContext`: `scope` com repositórios e usuário atual
 | Product.brand | products.brand_key | Primeira marca da lista OFF, trim + minúsculas; null se ausente |
 | Product.category | products.category | Primeiro categories_tags informado; null se ausente |
 | Product.imageUrl | products.image_url | Pode ser null; UI trata erro de imagem |
+| Product.source | products.source | `open_food_facts` ou null; null = origem não informada (produtos antigos, sem data retroativa) |
+| Product.sourceUrl | products.source_url | HTTPS em host openfoodfacts.org; a UI só exibe se passar em `safeSourceUri` |
+| Product.sourceFetchedAt | products.source_fetched_at | Momento da consulta ao OFF, em UTC; null se desconhecido |
 | Review.userId | reviews.user_id | ID de auth, nunca apelido |
 | Review.nickname | profiles.nickname | Obter por relação profiles, não duplicar em reviews |
 | Review.rating | reviews.rating | Inteiro 1–5 |
