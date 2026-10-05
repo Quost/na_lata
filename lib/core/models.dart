@@ -6,11 +6,24 @@ class Product {
     this.category,
     this.imageUrl,
     this.isDemo = false,
+    this.source,
+    this.sourceUrl,
+    this.sourceFetchedAt,
   });
   final String barcode;
   final String name;
   final String? brand, category, imageUrl;
   final bool isDemo;
+
+  /// Origem dos dados (ver [ProductSource]); null em produtos anteriores ao
+  /// registro de origem, que não recebem data nem fonte retroativas.
+  final String? source;
+
+  /// Página do produto na fonte; só é exibida se passar em [safeSourceUri].
+  final String? sourceUrl;
+
+  /// Momento em que a fonte foi consultada; null quando desconhecido.
+  final DateTime? sourceFetchedAt;
 }
 
 class Review {
@@ -42,6 +55,20 @@ class ProductQuery {
   const ProductQuery({this.text = '', this.brand, this.category});
   final String text;
   final String? brand, category;
+}
+
+/// Marca do diretório; [key] é o brand_key dos produtos, sem bordas.
+class Brand {
+  const Brand({required this.key, required this.productCount});
+  final String key;
+  final int productCount;
+}
+
+/// Página de marcas; [nextAfter] nulo indica a última página.
+class BrandPage {
+  const BrandPage({required this.items, this.nextAfter});
+  final List<Brand> items;
+  final String? nextAfter;
 }
 
 class RatingSummary {
