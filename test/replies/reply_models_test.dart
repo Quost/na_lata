@@ -27,9 +27,11 @@ void main() {
     test('aceita apelido em lista ou ausente', () {
       expect(
         replyFromRow(
-          row(profiles: [
-            {'nickname': 'Bia'},
-          ]),
+          row(
+            profiles: [
+              {'nickname': 'Bia'},
+            ],
+          ),
         ).authorNickname,
         'Bia',
       );
@@ -48,11 +50,8 @@ void main() {
   });
 
   group('validateReplyBody', () {
-    Matcher validation() => isA<AppFailure>().having(
-      (e) => e.kind,
-      'kind',
-      FailureKind.validation,
-    );
+    Matcher validation() =>
+        isA<AppFailure>().having((e) => e.kind, 'kind', FailureKind.validation);
 
     test('rejeita vazio e só espaços', () {
       expect(() => validateReplyBody(''), throwsA(validation()));

@@ -157,9 +157,7 @@ void main() {
     );
     await expectLater(
       repo.create('v1', 'Oi'),
-      throwsA(
-        failure(FailureKind.unauthorized, replyAccountRequiredMessage),
-      ),
+      throwsA(failure(FailureKind.unauthorized, replyAccountRequiredMessage)),
     );
   });
 
