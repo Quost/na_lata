@@ -2,15 +2,30 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/models.dart';
 import '../../design_system/na_lata_ui.dart';
+import 'link_opener.dart';
+import 'product_quality.dart';
 
 /// T06 — Ficha completa do produto.
 ///
 /// Exibe nome, marca, categoria e imagem do [Product] recebido via
 /// [FeatureContext.product]. Quando o produto é nulo (abertura pela Oficina),
 /// mostra orientação para abrir pelo catálogo.
+///
+/// CAT04: indica de forma específica o que falta na ficha (foto, marca,
+/// quantidade) e, havendo [sourceUrl] do Open Food Facts, oferece abrir a
+/// página de edição da fonte. Nada é enviado nem editado pelo app.
 class DetailFeature extends StatelessWidget {
-  const DetailFeature({super.key, required this.context});
+  const DetailFeature({
+    super.key,
+    required this.context,
+    this.sourceUrl,
+    this.openLink = openExternalLink,
+  });
   final FeatureContext context;
+
+  /// URL da fonte do produto (CAT01). Nula para produto manual ou antigo.
+  final String? sourceUrl;
+  final LinkOpener openLink;
 
   @override
   Widget build(BuildContext buildContext) {
@@ -22,14 +37,24 @@ class DetailFeature extends StatelessWidget {
         icon: Icons.info_outline,
       );
     }
-    return _ProductCard(product: product);
+    return _ProductCard(
+      product: product,
+      sourceUrl: sourceUrl,
+      openLink: openLink,
+    );
   }
 }
 
 /// Ficha visual do produto com imagem, nome, marca, categoria e barcode.
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product});
+  const _ProductCard({
+    required this.product,
+    required this.sourceUrl,
+    required this.openLink,
+  });
   final Product product;
+  final String? sourceUrl;
+  final LinkOpener openLink;
 
   @override
   Widget build(BuildContext context) {
@@ -105,9 +130,119 @@ class _ProductCard extends StatelessWidget {
                   label: 'Código',
                   value: product.barcode,
                 ),
+
+                // --- Qualidade da ficha ---
+                _QualitySection(
+                  product: product,
+                  sourceUrl: sourceUrl,
+                  openLink: openLink,
+                ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Indica campos essenciais ausentes e, quando possível, encaminha a correção
+/// para a página de edição do Open Food Facts. Produto de demonstração não é
+/// avaliado: é fictício e não tem fonte.
+class _QualitySection extends StatefulWidget {
+  const _QualitySection({
+    required this.product,
+    required this.sourceUrl,
+    required this.openLink,
+  });
+  final Product product;
+  final String? sourceUrl;
+  final LinkOpener openLink;
+
+  @override
+  State<_QualitySection> createState() => _QualitySectionState();
+}
+
+class _QualitySectionState extends State<_QualitySection> {
+  bool _opening = false;
+  bool _failed = false;
+
+  Future<void> _open(Uri uri) async {
+    if (_opening) return;
+    setState(() {
+      _opening = true;
+      _failed = false;
+    });
+    var opened = false;
+    try {
+      opened = await widget.openLink(uri);
+    } catch (_) {
+      opened = false;
+    }
+    if (!mounted) return;
+    setState(() {
+      _opening = false;
+      _failed = !opened;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
+    if (product.isDemo) return const SizedBox.shrink();
+    final missing = missingEssentialFields(product);
+    if (missing.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: NaSpace.lg),
+        child: NaNotice(
+          icon: Icons.check_circle_outline,
+          message: 'Ficha completa: foto, marca e quantidade informadas.',
+        ),
+      );
+    }
+    final uri = offEditUri(
+      barcode: product.barcode,
+      sourceUrl: widget.sourceUrl,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: NaSpace.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          NaNotice(
+            icon: Icons.warning_amber_outlined,
+            message:
+                'Ficha incompleta. Faltam: '
+                '${missing.map((field) => field.label).join(', ')}.',
+          ),
+          const SizedBox(height: NaSpace.sm),
+          if (uri != null) ...[
+            NaButton(
+              label: 'Corrigir no Open Food Facts',
+              loading: _opening,
+              onPressed: () => _open(uri),
+            ),
+            const SizedBox(height: NaSpace.sm),
+            Text(
+              'Abre a página de edição no navegador. O app não envia seus '
+              'dados nem altera a ficha.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ] else
+            const NaNotice(
+              icon: Icons.link_off,
+              message:
+                  'Correção indisponível: este produto não tem fonte Open '
+                  'Food Facts registrada (cadastro manual ou ficha antiga).',
+            ),
+          if (_failed) ...[
+            const SizedBox(height: NaSpace.sm),
+            const NaNotice(
+              icon: Icons.error_outline,
+              message:
+                  'Não foi possível abrir o link. Tente novamente mais tarde.',
+            ),
+          ],
         ],
       ),
     );
