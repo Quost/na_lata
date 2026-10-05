@@ -57,6 +57,20 @@ class ProductQuery {
   final String? brand, category;
 }
 
+/// Marca do diretório; [key] é o brand_key dos produtos, sem bordas.
+class Brand {
+  const Brand({required this.key, required this.productCount});
+  final String key;
+  final int productCount;
+}
+
+/// Página de marcas; [nextAfter] nulo indica a última página.
+class BrandPage {
+  const BrandPage({required this.items, this.nextAfter});
+  final List<Brand> items;
+  final String? nextAfter;
+}
+
 class RatingSummary {
   const RatingSummary({
     required this.average,
