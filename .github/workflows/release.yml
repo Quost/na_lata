@@ -1,0 +1,31 @@
+name: Release
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  tag:
+    name: Sobe versão e cria tag
+    # evita loop: o commit de versão não dispara novo release
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - id: bump
+        run: echo "version=$(bash scripts/bump_version.sh)" >> "$GITHUB_OUTPUT"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): v${{ steps.bump.outputs.version }} [skip ci]"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main "v${{ steps.bump.outputs.version }}"
+      # pushes feitos com GITHUB_TOKEN não disparam workflows; workflow_dispatch é a exceção
+      - name: Dispara o deploy na tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref "v${{ steps.bump.outputs.version }}"

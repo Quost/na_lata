@@ -59,18 +59,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-java@v4
+      - name: Só builda se android/pubspec mudou
+        id: gate
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -qE '^(android/|pubspec\.(yaml|lock))'; then echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: subosito/flutter-action@v2
+      - if: steps.gate.outputs.run == 'true'
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.38.5'
           channel: stable
           cache: true
-      - run: flutter pub get --enforce-lockfile
-      - run: flutter build apk --debug
+      - if: steps.gate.outputs.run == 'true'
+        run: flutter pub get --enforce-lockfile
+      - if: steps.gate.outputs.run == 'true'
+        run: flutter build apk --debug
   supabase:
     name: supabase (migrations + RLS)
     runs-on: ubuntu-latest

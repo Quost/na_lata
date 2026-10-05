@@ -1,35 +1,15 @@
 name: Deploy
 on:
   push:
-    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
 concurrency:
   group: deploy
   cancel-in-progress: false
 jobs:
-  version:
-    name: Sobe versão
-    # evita loop: o commit de versão não dispara novo deploy
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      sha: ${{ steps.commit.outputs.sha }}
-      version: ${{ steps.bump.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: bump
-        run: echo "version=$(bash scripts/bump_version.sh)" >> "$GITHUB_OUTPUT"
-      - id: commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore(release): v${{ steps.bump.outputs.version }} [skip ci]"
-          git push origin HEAD:main
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   deploy:
-    needs: version
     runs-on: ubuntu-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     environment: production
     permissions:
       contents: read
@@ -39,8 +19,6 @@ jobs:
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.version.outputs.sha }}
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -57,14 +35,12 @@ jobs:
             echo "Nenhuma function para publicar."
           fi
   build:
-    needs: version
+    needs: deploy
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.version.outputs.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -75,9 +51,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get --enforce-lockfile
-      - run: flutter test
       - run: flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: na-lata-${{ needs.version.outputs.version }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Anexa APK à release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/app/outputs/flutter-apk/app-release.apk --generate-notes
