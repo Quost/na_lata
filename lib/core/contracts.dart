@@ -37,6 +37,15 @@ abstract interface class CommunityRepository {
   Future<void> setNickname(String nickname);
 }
 
+abstract interface class BrandFollowRepository {
+  Future<bool> isFollowing(String brandKey);
+  Future<List<String>> followingBrands();
+  Future<void> setFollowing({
+    required String brandKey,
+    required bool isFollowing,
+  });
+}
+
 class FeaturePending implements Exception {
   const FeaturePending(this.task);
   final String task;

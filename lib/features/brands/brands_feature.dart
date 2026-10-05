@@ -81,6 +81,7 @@ List<BrandStat> buildBrandStats({
 
 class BrandsFeature extends StatefulWidget {
   const BrandsFeature({super.key, required this.context});
+
   final FeatureContext context;
 
   @override
@@ -218,6 +219,8 @@ class _BrandsFeatureState extends State<BrandsFeature> {
       const SizedBox(height: NaSpace.xs),
       Text(_describeBrand(stat)),
       const SizedBox(height: NaSpace.md),
+      _BrandFollowButton(scope: _scope, brandKey: stat.brand),
+      const SizedBox(height: NaSpace.md),
       for (final product in stat.products)
         NaItemCard(
           leading: const Icon(Icons.shopping_bag_outlined),
@@ -241,3 +244,125 @@ class _BrandsFeatureState extends State<BrandsFeature> {
         '$products $productLabel';
   }
 }
+
+class _BrandFollowButton extends StatefulWidget {
+  const _BrandFollowButton({required this.scope, required this.brandKey});
+
+  final AppScope scope;
+  final String brandKey;
+
+  @override
+  State<_BrandFollowButton> createState() => _BrandFollowButtonState();
+}
+
+class _BrandFollowButtonState extends State<_BrandFollowButton> {
+  bool? _isFollowing;
+  bool _loading = true;
+  bool _saving = false;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.scope.isAuthenticated) {
+      _isFollowing = false;
+      _loading = false;
+      return;
+    }
+    _loadFollowing();
+  }
+
+  Future<void> _loadFollowing() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    try {
+      final following = await widget.scope.brandFollows.isFollowing(
+        widget.brandKey,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isFollowing = following;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = _errorMessage(error);
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFollowing() async {
+    if (!widget.scope.isAuthenticated) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Salve suas marcas favoritas'),
+          content: const Text(
+            'Entre ou crie uma conta para seguir marcas e acompanhar novidades.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendi'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final previous = _isFollowing!;
+    final next = !previous;
+    setState(() {
+      _isFollowing = next;
+      _saving = true;
+    });
+    try {
+      await widget.scope.brandFollows.setFollowing(
+        brandKey: widget.brandKey,
+        isFollowing: next,
+      );
+      if (!mounted) return;
+      setState(() => _saving = false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isFollowing = previous;
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(_errorMessage(error))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const NaLoading();
+    if (_loadError != null) {
+      return NaError(message: _loadError!, onRetry: _loadFollowing);
+    }
+    return FilledButton.icon(
+      onPressed: _saving ? null : _toggleFollowing,
+      icon: _saving
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              _isFollowing!
+                  ? Icons.notifications_active_outlined
+                  : Icons.notifications_none_outlined,
+            ),
+      label: Text(_isFollowing! ? 'Seguindo' : 'Seguir marca'),
+    );
+  }
+}
+
+String _errorMessage(Object error) => error is AppFailure
+    ? error.message
+    : 'Não foi possível acessar as marcas. Tente novamente.';

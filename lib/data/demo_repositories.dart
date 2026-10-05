@@ -306,3 +306,32 @@ class DemoCommunity implements CommunityRepository {
     _nickname = value;
   }
 }
+
+class DemoBrandFollows implements BrandFollowRepository {
+  final Set<String> _following = {};
+
+  @override
+  Future<bool> isFollowing(String brandKey) async =>
+      _following.contains(_normalizeBrandKey(brandKey));
+
+  @override
+  Future<List<String>> followingBrands() async => (_following.toList()..sort());
+
+  @override
+  Future<void> setFollowing({
+    required String brandKey,
+    required bool isFollowing,
+  }) async {
+    final key = _normalizeBrandKey(brandKey);
+    if (key.isEmpty) {
+      throw ArgumentError.value(brandKey, 'brandKey', 'Não pode ser vazio.');
+    }
+    if (isFollowing) {
+      _following.add(key);
+    } else {
+      _following.remove(key);
+    }
+  }
+}
+
+String _normalizeBrandKey(String value) => value.trim().toLowerCase();

@@ -4,6 +4,7 @@ import 'app.dart';
 import 'core/app_scope.dart';
 import 'core/app_config.dart';
 import 'data/demo_repositories.dart';
+import 'data/brand_repository.dart';
 import 'data/open_food_facts_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
@@ -37,8 +38,12 @@ Future<void> main() async {
           products: demo ? DemoProducts() : SupabaseProducts(client!),
           reviews: demo ? DemoReviews() : SupabaseReviews(client!),
           community: demo ? DemoCommunity() : SupabaseCommunity(client!),
+          brandFollows: demo
+              ? DemoBrandFollows()
+              : SupabaseBrandFollows(client!),
           openFoodFacts: HttpOpenFoodFactsRepository(),
           isDemo: demo,
+          isAuthenticated: demo || client!.isAuthenticated,
           userId: demo ? 'demo-user' : client!.requireUserId,
         ),
       ),

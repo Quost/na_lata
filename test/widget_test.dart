@@ -10,8 +10,10 @@ AppScope demoScope() => AppScope(
   products: DemoProducts(),
   reviews: DemoReviews(),
   community: DemoCommunity(),
+  brandFollows: DemoBrandFollows(),
   openFoodFacts: HttpOpenFoodFactsRepository(),
   isDemo: true,
+  isAuthenticated: true,
   userId: 'demo-user',
 );
 
