@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'core/app_scope.dart';
 import 'core/models.dart';
 import 'feature_registry.dart';
 import 'features/appearance/theme_controller.dart';
+import 'features/history/history_feature.dart' show recordVisit;
 import 'design_system/na_lata_ui.dart';
 
 class NaLataApp extends StatelessWidget {
@@ -33,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   int tab = 0;
 
   void openProduct(Product p) {
+    unawaited(recordVisit(p, userId: widget.scope.userId));
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ProductPage(scope: widget.scope, product: p),
@@ -265,11 +269,14 @@ class ProductPage extends StatelessWidget {
       final args = FeatureContext(
         scope: scope,
         product: product,
-        openProduct: (p) => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => ProductPage(scope: scope, product: p),
-          ),
-        ),
+        openProduct: (p) {
+          unawaited(recordVisit(p, userId: scope.userId));
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ProductPage(scope: scope, product: p),
+            ),
+          );
+        },
       );
       Widget feature(String task) =>
           features.firstWhere((t) => t.$1 == task).$3(args);
