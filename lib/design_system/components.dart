@@ -209,3 +209,41 @@ class NaItemCard extends StatelessWidget {
     ),
   );
 }
+
+/// Aviso informativo discreto (não é erro). Usa cores do tema para contraste
+/// correto no claro e no escuro.
+class NaNotice extends StatelessWidget {
+  const NaNotice({
+    super.key,
+    required this.message,
+    this.icon = Icons.info_outline,
+  });
+  final String message;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(NaSpace.md),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(NaRadius.control),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: scheme.onSurfaceVariant),
+          const SizedBox(width: NaSpace.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

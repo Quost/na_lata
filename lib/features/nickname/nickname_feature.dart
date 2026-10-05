@@ -1,3 +1,4 @@
+// Autoria: Kauã Dal Santo (T23).
 import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../data/clients/app_failure.dart';

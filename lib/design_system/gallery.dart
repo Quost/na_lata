@@ -2,8 +2,23 @@ import 'package:flutter/material.dart';
 import 'components.dart';
 import 'tokens.dart';
 
-class DesignSystemGallery extends StatelessWidget {
+/// Vitrine dos componentes visuais compartilhados. Não é uma tela do usuário
+/// nem faz parte da navegação: serve de referência de aparência e de estados.
+/// Cada componente aqui reage de verdade (estado local), sem regra de negócio,
+/// cálculo de média ou acesso a banco — isso pertence às funcionalidades.
+class DesignSystemGallery extends StatefulWidget {
   const DesignSystemGallery({super.key});
+  @override
+  State<DesignSystemGallery> createState() => _DesignSystemGalleryState();
+}
+
+class _DesignSystemGalleryState extends State<DesignSystemGallery> {
+  static const _sabores = ['Leite', 'Chocolate'];
+  final Set<String> _filtros = {'Leite'};
+  int _salvos = 0;
+  bool _cardSalvo = false;
+  bool _comFalha = true;
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Guia visual · Na Lata')),
@@ -65,23 +80,25 @@ class DesignSystemGallery extends StatelessWidget {
           ),
           NaSection(
             title: 'Ações',
+            description:
+                'Salvar soma um item ao contador; Limpar zera e fica indisponível quando não há o que limpar.',
             child: Wrap(
               spacing: NaSpace.sm,
               runSpacing: NaSpace.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 NaButton(
-                  label: 'Salvar avaliação',
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Exemplo visual — nenhuma avaliação foi salva.',
-                      ),
-                    ),
-                  ),
+                  label: _salvos == 0 ? 'Salvar avaliação' : 'Salvas: $_salvos',
+                  onPressed: () => setState(() => _salvos++),
                 ),
                 const NaButton(label: 'Salvar', onPressed: null, loading: true),
                 const NaButton(label: 'Indisponível', onPressed: null),
-                OutlinedButton(onPressed: () {}, child: const Text('Cancelar')),
+                OutlinedButton(
+                  onPressed: _salvos == 0
+                      ? null
+                      : () => setState(() => _salvos = 0),
+                  child: const Text('Limpar'),
+                ),
               ],
             ),
           ),
@@ -110,16 +127,18 @@ class DesignSystemGallery extends StatelessWidget {
                 Wrap(
                   spacing: NaSpace.sm,
                   children: [
-                    FilterChip(
-                      label: const Text('Leite'),
-                      selected: true,
-                      onSelected: (_) {},
-                    ),
-                    FilterChip(
-                      label: const Text('Chocolate'),
-                      selected: false,
-                      onSelected: (_) {},
-                    ),
+                    for (final sabor in _sabores)
+                      FilterChip(
+                        label: Text(sabor),
+                        selected: _filtros.contains(sabor),
+                        onSelected: (selecionado) => setState(() {
+                          if (selecionado) {
+                            _filtros.add(sabor);
+                          } else {
+                            _filtros.remove(sabor);
+                          }
+                        }),
+                      ),
                   ],
                 ),
               ],
@@ -131,10 +150,16 @@ class DesignSystemGallery extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 NaItemCard(
-                  title: 'Produto de exemplo',
-                  subtitle: 'Marca de exemplo • Categoria',
-                  onTap: () {},
+                  leading: Icon(
+                    _cardSalvo ? Icons.bookmark : Icons.bookmark_border,
+                  ),
+                  title: 'Bebida de aveia',
+                  subtitle: _cardSalvo
+                      ? 'Salvo na sua lista'
+                      : 'Toque para salvar na lista',
+                  onTap: () => setState(() => _cardSalvo = !_cardSalvo),
                 ),
+                const SizedBox(height: NaSpace.md),
                 const Wrap(
                   spacing: NaSpace.sm,
                   children: [
@@ -154,10 +179,21 @@ class DesignSystemGallery extends StatelessWidget {
                   title: 'Nenhum produto encontrado',
                   message: 'Tente outro nome ou limpe os filtros.',
                 ),
-                NaError(
-                  message: 'Confira sua conexão e tente outra vez.',
-                  onRetry: () {},
-                ),
+                if (_comFalha)
+                  NaError(
+                    message: 'Confira sua conexão e tente outra vez.',
+                    onRetry: () => setState(() => _comFalha = false),
+                  )
+                else
+                  NaEmpty(
+                    icon: Icons.check_circle_outline,
+                    title: 'Conexão restabelecida',
+                    message: 'A ação "Tentar novamente" refez a busca.',
+                    action: OutlinedButton(
+                      onPressed: () => setState(() => _comFalha = true),
+                      child: const Text('Simular falha de novo'),
+                    ),
+                  ),
               ],
             ),
           ),

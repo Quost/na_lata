@@ -2,33 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/app_scope.dart';
+import 'core/app_config.dart';
 import 'data/demo_repositories.dart';
 import 'data/open_food_facts_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
 import 'data/clients/backend_client.dart';
+import 'features/appearance/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  const mode = String.fromEnvironment('APP_MODE', defaultValue: 'demo');
+  await themeController.load();
   try {
-    if (mode != 'demo' && mode != 'supabase') {
-      throw StateError('APP_MODE deve ser demo ou supabase.');
-    }
-    final demo = mode == 'demo';
+    final config = AppConfig.fromEnvironment();
+    config.validate();
+    final demo = config.isDemo;
     BackendClient? client;
     if (!demo) {
-      const url = String.fromEnvironment('SUPABASE_URL');
-      const key = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
-      if (url.isEmpty || key.isEmpty) {
-        throw StateError(
-          'Configure URL e chave pública em config/classroom.json.',
-        );
-      }
       await Supabase.initialize(
-        url: url,
-        publishableKey: key,
+        url: config.url,
+        publishableKey: config.key,
         postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
       );
       final sdk = Supabase.instance.client;
