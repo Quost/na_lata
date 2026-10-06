@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_scope.dart';
 import 'core/app_config.dart';
+import 'core/contracts.dart';
 import 'data/auth_repository.dart';
 import 'data/demo_repositories.dart';
 import 'data/open_food_facts_repository.dart';
+import 'data/product_refresh_repository.dart';
 import 'data/brand_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
@@ -37,10 +39,17 @@ Future<void> main() async {
       );
       client = BackendClient(Supabase.instance.client);
     }
-    final products = CachedProductRepository(
-      demo ? DemoProducts() : SupabaseProducts(client!),
-      prefs,
-    );
+    final ProductRepository sourceProducts;
+    final ProductRefreshRepository productRefresh;
+    if (demo) {
+      final memory = DemoProducts();
+      sourceProducts = memory;
+      productRefresh = DemoProductRefresh(memory);
+    } else {
+      sourceProducts = SupabaseProducts(client!);
+      productRefresh = SupabaseProductRefresh(client, sourceProducts);
+    }
+    final products = CachedProductRepository(sourceProducts, prefs);
     final reviews = demo ? DemoReviews() : SupabaseReviews(client!);
     final community = demo ? DemoCommunity() : SupabaseCommunity(client!);
     final brands = demo ? null : SupabaseBrands(client!);
@@ -57,6 +66,7 @@ Future<void> main() async {
         onboarding: onboarding,
         scopeFor: (userId) => AppScope(
           products: products,
+          productRefresh: productRefresh,
           reviews: reviews,
           community: community,
           brands: brands,
