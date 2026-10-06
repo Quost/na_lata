@@ -3,6 +3,7 @@
 set -u
 fail=0
 err() { echo "::error::$1"; fail=1; }
+base_ref=${BASE_SHA:-origin/${GITHUB_BASE_REF:-main}}
 
 # 1. Segredos/chaves administrativas no cliente
 if grep -rniE "service_role|sb_secret_|SUPABASE_SERVICE" lib tool android config pubspec.yaml 2>/dev/null; then
@@ -44,14 +45,14 @@ while IFS=$'\t' read -r status old_path new_path; do
   old_version=$(basename "$old_path" | cut -d_ -f1)
   new_version=$(basename "$new_path" | cut -d_ -f1)
   old_name=$(basename "$old_path")
-  base_count=$(git ls-tree -r --name-only "origin/${GITHUB_BASE_REF:-main}" -- supabase/migrations \
+  base_count=$(git ls-tree -r --name-only "$base_ref" -- supabase/migrations \
     | awk -v version="$old_version" 'BEGIN { n=0 } $0 ~ "/" version "_" { n++ } END { print n }')
   legacy_invalid_name=false
   [[ "$old_name" =~ ^[0-9]{12,14}_[a-z0-9_]+\.sql$ ]] || legacy_invalid_name=true
   if [[ "$old_version" == "$new_version" || ( "$base_count" -lt 2 && "$legacy_invalid_name" != true ) ]]; then
     err "Migration existente renomeada sem resolver colisão de versão: $old_path -> $new_path"
   fi
-done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations)
+done < <(git diff --diff-filter=R --name-status "$base_ref"...HEAD -- supabase/migrations)
 
 # 5. Skips de teste
 if grep -rnE "skip:\s*true|@Skip|\bfocus\b.*test" test 2>/dev/null; then
