@@ -41,7 +41,7 @@ while IFS=$'\t' read -r old_path new_path; do
   if [[ "$old_version" == "$new_version" || "$base_count" -lt 2 ]]; then
     err "Migration existente renomeada sem resolver colisão de versão: $old_path -> $new_path"
   fi
-done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations | cut -f1,2)
+done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations | cut -f2,3)
 
 # 5. Skips de teste
 if grep -rnE "skip:\s*true|@Skip|\bfocus\b.*test" test 2>/dev/null; then
