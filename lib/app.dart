@@ -244,6 +244,7 @@ class _MyCornerTab extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyMedium,
       ),
       const SizedBox(height: NaSpace.lg),
+      feature('AUT02'), // salvar minha conta
       feature('T11'), // minhas avaliações
       feature('T18'), // favoritos
       feature('T24'), // histórico

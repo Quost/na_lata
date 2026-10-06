@@ -38,5 +38,51 @@ class FakeAuthRepository implements AuthRepository {
     return nextGuest;
   }
 
+  // AUT02 — salvar conta. [accountError] faz a próxima ação de conta falhar.
+  @override
+  String? pendingEmail;
+  Object? accountError;
+  final linkedEmails = <String>[];
+  int resendCalls = 0;
+  int passwordSets = 0;
+
+  void _failIfNeeded() {
+    final error = accountError;
+    if (error != null) throw error;
+  }
+
+  @override
+  Future<void> linkEmail(String email) async {
+    _failIfNeeded();
+    linkedEmails.add(email);
+    pendingEmail = email;
+  }
+
+  @override
+  Future<void> resendConfirmation(String email) async {
+    _failIfNeeded();
+    resendCalls++;
+  }
+
+  /// Simula o clique no link: mesmo userId, agora sem ser anônimo.
+  void confirmEmail() {
+    pendingEmail = null;
+    emit(
+      AuthSignedIn(AuthIdentity(userId: current!.userId, isAnonymous: false)),
+    );
+  }
+
+  @override
+  Future<AuthIdentity> reload() async {
+    _failIfNeeded();
+    return current!;
+  }
+
+  @override
+  Future<void> setPassword(String password) async {
+    _failIfNeeded();
+    passwordSets++;
+  }
+
   Future<void> close() => _events.close();
 }

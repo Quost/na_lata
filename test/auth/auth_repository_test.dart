@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -110,5 +111,119 @@ void main() {
       );
       expect(repo.current, isNull);
     });
+  });
+
+  group('salvar conta (AUT02)', () {
+    const userJson = {
+      'id': 'u1',
+      'aud': 'authenticated',
+      'is_anonymous': true,
+      'app_metadata': <String, dynamic>{},
+      'user_metadata': <String, dynamic>{},
+      'created_at': '2026-01-01T00:00:00Z',
+    };
+
+    /// Repositório com sessão anônima de u1 já restaurada.
+    Future<SupabaseAuthRepository> guest(
+      http.Response Function(http.Request) handler,
+    ) async {
+      final sdk = SupabaseClient(
+        'https://example.supabase.co',
+        'public-test-key',
+        httpClient: MockClient((request) async {
+          final r = handler(request);
+          return http.Response(
+            r.body,
+            r.statusCode,
+            headers: {'content-type': 'application/json'},
+            request: request,
+          );
+        }),
+        // PKCE exige storage do supabase_flutter; no teste basta o implícito.
+        authOptions: const AuthClientOptions(
+          autoRefreshToken: false,
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+      addTearDown(sdk.dispose);
+      final expiresAt =
+          DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+          1000;
+      await sdk.auth.recoverSession(
+        jsonEncode({
+          'access_token': 'header.payload.signature',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'expires_at': expiresAt,
+          'refresh_token': 'refresh',
+          'user': userJson,
+        }),
+      );
+      return SupabaseAuthRepository(BackendClient(sdk));
+    }
+
+    http.Response error(int status, String code) => http.Response(
+      jsonEncode({
+        'code': status,
+        'error_code': code,
+        'msg': 'detalhe interno',
+      }),
+      status,
+    );
+
+    test('vincula email à mesma identidade e fica pendente', () async {
+      final repo = await guest((request) {
+        expect(request.method, 'PUT');
+        expect(request.url.path, '/auth/v1/user');
+        expect(request.url.queryParameters['redirect_to'], authCallbackUrl);
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['email'], 'ana@exemplo.com');
+        expect(body.containsKey('password'), isFalse);
+        return http.Response(
+          jsonEncode({...userJson, 'new_email': 'ana@exemplo.com'}),
+          200,
+        );
+      });
+      await repo.linkEmail('ana@exemplo.com');
+      expect(repo.pendingEmail, 'ana@exemplo.com');
+      expect(repo.current, const AuthIdentity(userId: 'u1', isAnonymous: true));
+    });
+
+    test('email já usado e email inválido têm a mesma mensagem', () async {
+      for (final (status, code, kind) in [
+        (422, 'email_exists', FailureKind.conflict),
+        (400, 'email_address_invalid', FailureKind.validation),
+      ]) {
+        final repo = await guest((_) => error(status, code));
+        await expectLater(
+          repo.linkEmail('ana@exemplo.com'),
+          throwsA(
+            isA<AppFailure>()
+                .having((e) => e.kind, 'kind', kind)
+                .having((e) => e.message, 'message', emailUnavailableMessage),
+          ),
+        );
+        expect(repo.current!.isAnonymous, isTrue);
+      }
+    });
+
+    test(
+      'limite de envio vira aviso de espera, sem detalhes internos',
+      () async {
+        final repo = await guest(
+          (_) => error(429, 'over_email_send_rate_limit'),
+        );
+        await expectLater(
+          repo.resendConfirmation('ana@exemplo.com'),
+          throwsA(
+            isA<AppFailure>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains('Muitas tentativas'), isNot(contains('detalhe'))),
+            ),
+          ),
+        );
+      },
+    );
   });
 }

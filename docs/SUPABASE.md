@@ -22,6 +22,19 @@ Uma resposta 401 em `/rest/v1/` sem sessão não prova que a chave é inválida.
 
 A identidade anônima persiste no aparelho. Reinstalar/limpar armazenamento cria nova identidade, sem recuperar avaliações anteriores. Não usar apelido como autorização. Para uso público após a aula, revisar autenticação, CAPTCHA e limites; este projeto foi pensado para uma turma controlada.
 
+## Salvar minha conta (AUT02)
+
+O visitante vira conta com email e senha **sem trocar de userId**: o app vincula o email à identidade anônima (`updateUser`) e, depois da confirmação, define a senha. Avaliações e favoritos continuam com o mesmo usuário. Nenhuma conta é mesclada: email já usado por outra conta mostra a mesma mensagem genérica de email inválido.
+
+Configuração no ambiente de teste:
+
+1. Authentication → Sign In / Providers → **Email** habilitado, com **Confirm email** ligado.
+2. Authentication → URL Configuration → **Redirect URLs**: adicionar `nalata://login-callback`. O mesmo endereço está no `AndroidManifest.xml`; sem ele, o link do email não volta ao app (o usuário ainda pode confirmar no navegador e tocar em **Já confirmei**).
+3. Limites: o SMTP padrão do Supabase envia poucos emails por hora e há intervalo mínimo entre reenvios (ver Authentication → Rate Limits). Ao estourar, o app mostra "Muitas tentativas" e não reenvia sozinho. Para a turma inteira, configurar SMTP próprio ou aumentar o limite.
+4. A senha só é enviada ao Supabase; o app não grava senha nem token.
+
+Validar em staging: anotar o userId do visitante (Authentication → Users), avaliar e favoritar um produto, salvar a conta, confirmar pelo link e definir a senha. O mesmo userId deve aparecer agora com email e sem a marca de anônimo, e as avaliações/favoritos continuam visíveis. Repetir com um email já cadastrado: o app mostra a mensagem genérica e segue como visitante.
+
 ## Quem pode fazer o quê
 
 - Usuário autenticado (inclusive anônimo): ler catálogo, perfis/apelidos, avaliações e relatos.
