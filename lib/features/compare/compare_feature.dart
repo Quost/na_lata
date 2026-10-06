@@ -6,14 +6,18 @@ import '../../data/clients/app_failure.dart';
 import '../../design_system/na_lata_ui.dart';
 import '../summary/rating_summary.dart';
 import 'compare_logic.dart';
+import 'unit_price_logic.dart';
+import 'unit_price_panel.dart';
 
 class CompareFeature extends StatefulWidget {
   const CompareFeature({
     super.key,
     required this.context,
     this.summarize = summarizeReviews,
+    this.unitPrices = const PendingUnitPriceRepository(),
   });
   final FeatureContext context;
+  final UnitPriceRepository unitPrices;
 
   /// Padrão é `summarizeReviews` (T10); testes injetam um fake.
   final ReviewSummarizer summarize;
@@ -27,6 +31,8 @@ class _CompareFeatureState extends State<CompareFeature> {
   var _selection = const CompareSelection();
   final _slotErrors = <int, String>{};
   List<ComparedProduct>? _result;
+  UnitPriceComparison? _unitResult;
+  String? _unitError;
   String? _compareError;
   bool _comparing = false;
   var _request = 0;
@@ -121,6 +127,8 @@ class _CompareFeatureState extends State<CompareFeature> {
     if (!_selection.isComplete) {
       setState(() {
         _result = null;
+        _unitResult = null;
+        _unitError = null;
         _compareError = null;
         _comparing = false;
       });
@@ -131,6 +139,8 @@ class _CompareFeatureState extends State<CompareFeature> {
       _comparing = true;
       _compareError = null;
       _result = null;
+      _unitResult = null;
+      _unitError = null;
     });
     try {
       final result = await loadComparison(
@@ -138,7 +148,26 @@ class _CompareFeatureState extends State<CompareFeature> {
         products: products,
         summarize: widget.summarize,
       );
-      if (mounted && request == _request) setState(() => _result = result);
+      if (!mounted || request != _request) return;
+      setState(() => _result = result);
+      try {
+        final unitResult = await loadUnitPrices(
+          repository: widget.unitPrices,
+          scope: _scope,
+          products: products,
+        );
+        if (mounted && request == _request) {
+          setState(() => _unitResult = unitResult);
+        }
+      } on Exception catch (e) {
+        if (mounted && request == _request) {
+          setState(() => _unitError = _describe(e));
+        }
+      } on ArgumentError catch (e) {
+        if (mounted && request == _request) {
+          setState(() => _unitError = _describe(e));
+        }
+      }
     } on Exception catch (e) {
       if (mounted && request == _request) {
         setState(() => _compareError = _describe(e));
@@ -157,7 +186,7 @@ class _CompareFeatureState extends State<CompareFeature> {
   Widget build(BuildContext context) => NaSection(
     title: 'Comparar dois produtos',
     description:
-        'Escolha dois produtos do catálogo para ver as avaliações lado a lado.',
+        'Compare avaliações e custo por kg ou litro de dois produtos equivalentes.',
     child: _body(context),
   );
 
@@ -194,8 +223,14 @@ class _CompareFeatureState extends State<CompareFeature> {
           const NaLoading(label: 'Comparando avaliações…')
         else if (_compareError != null)
           NaError(message: _compareError!, onRetry: _compare)
-        else if (_result != null)
+        else if (_result != null) ...[
           _ComparisonTable(items: _result!),
+          const SizedBox(height: NaSpace.lg),
+          if (_unitError != null)
+            NaError(message: _unitError!, onRetry: _compare)
+          else if (_unitResult != null)
+            UnitPricePanel(comparison: _unitResult!),
+        ],
       ],
     );
   }
