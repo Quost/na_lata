@@ -10,7 +10,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
-    environment: production
+    environment: PRD
     permissions:
       contents: read
     env:
@@ -25,9 +25,9 @@ jobs:
           DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
         run: |
-          test -n "$ACCESS_TOKEN" || { echo "::error::Configure o secret SUPABASE_ACCESS_TOKEN no environment production."; exit 1; }
-          test -n "$DB_PASSWORD" || { echo "::error::Configure o secret SUPABASE_DB_PASSWORD no environment production."; exit 1; }
-          test -n "$PROJECT_REF" || { echo "::error::Configure a variável SUPABASE_PROJECT_REF no environment production."; exit 1; }
+          test -n "$ACCESS_TOKEN" || { echo "::error::Configure o secret SUPABASE_ACCESS_TOKEN no environment PRD."; exit 1; }
+          test -n "$DB_PASSWORD" || { echo "::error::Configure o secret SUPABASE_DB_PASSWORD no environment PRD."; exit 1; }
+          test -n "$PROJECT_REF" || { echo "::error::Configure a variável SUPABASE_PROJECT_REF no environment PRD."; exit 1; }
       - uses: supabase/setup-cli@v1
         with:
           version: latest
