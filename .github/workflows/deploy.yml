@@ -31,9 +31,11 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      # O link sem senha registra a URL do Supavisor (IPv4), necessária nos
+      # runners do GitHub Actions, que não têm conectividade IPv6.
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Migrations (dry-run)
-        run: supabase db push --dry-run
+        run: supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
       - name: Migrations
         run: supabase db push --password "$SUPABASE_DB_PASSWORD"
       - name: Edge Functions
