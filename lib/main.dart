@@ -11,9 +11,11 @@ import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
 import 'data/clients/backend_client.dart';
+import 'data/cache/cached_product_repository.dart';
 import 'features/appearance/theme_controller.dart';
 import 'features/auth/session_controller.dart';
 import 'features/auth/session_gate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,7 @@ Future<void> main() async {
     final config = AppConfig.fromEnvironment();
     config.validate();
     final demo = config.isDemo;
+    final prefs = await SharedPreferences.getInstance();
     BackendClient? client;
     if (!demo) {
       await Supabase.initialize(
@@ -31,7 +34,10 @@ Future<void> main() async {
       );
       client = BackendClient(Supabase.instance.client);
     }
-    final products = demo ? DemoProducts() : SupabaseProducts(client!);
+    final products = CachedProductRepository(
+      demo ? DemoProducts() : SupabaseProducts(client!),
+      prefs,
+    );
     final reviews = demo ? DemoReviews() : SupabaseReviews(client!);
     final community = demo ? DemoCommunity() : SupabaseCommunity(client!);
     final brands = demo ? null : SupabaseBrands(client!);
