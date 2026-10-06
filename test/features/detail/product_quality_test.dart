@@ -2,11 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:na_lata/core/models.dart';
 import 'package:na_lata/features/detail/product_quality.dart';
 
-PackageSize? _size() => PackageSize.tryCreate(
-  500,
-  PackageUnit.g,
-  PackageSizeSource.offStructured,
-);
+PackageSize? _size() =>
+    PackageSize.tryCreate(500, PackageUnit.g, PackageSizeSource.offStructured);
 
 Product _product({String? imageUrl, String? brand, PackageSize? size}) =>
     Product(
@@ -29,18 +26,15 @@ void main() {
     });
 
     test('cada campo ausente é apontado individualmente', () {
-      expect(
-        missingEssentialFields(_product(brand: 'x', size: _size())),
-        [MissingField.image],
-      );
-      expect(
-        missingEssentialFields(_product(imageUrl: 'u', size: _size())),
-        [MissingField.brand],
-      );
-      expect(
-        missingEssentialFields(_product(imageUrl: 'u', brand: 'x')),
-        [MissingField.quantity],
-      );
+      expect(missingEssentialFields(_product(brand: 'x', size: _size())), [
+        MissingField.image,
+      ]);
+      expect(missingEssentialFields(_product(imageUrl: 'u', size: _size())), [
+        MissingField.brand,
+      ]);
+      expect(missingEssentialFields(_product(imageUrl: 'u', brand: 'x')), [
+        MissingField.quantity,
+      ]);
     });
 
     test('tudo ausente, em ordem fixa foto, marca, quantidade', () {

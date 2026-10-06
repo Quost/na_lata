@@ -184,10 +184,7 @@ void main() {
     ) async {
       final scope = await _pump(tester, _incomplete);
       expect(find.text(_action), findsNothing);
-      expect(
-        find.textContaining('Correção indisponível'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Correção indisponível'), findsOneWidget);
       expect(
         find.text('Ficha incompleta. Faltam: foto, marca, quantidade.'),
         findsOneWidget,
