@@ -3,6 +3,7 @@ import '../../app.dart';
 import '../../core/app_scope.dart';
 import '../../design_system/na_lata_ui.dart';
 import '../appearance/theme_controller.dart';
+import '../onboarding/onboarding_controller.dart';
 import 'session_controller.dart';
 
 /// Raiz do app: mostra o bootstrap da sessão e cria um [AppScope] por usuário.
@@ -15,9 +16,13 @@ class SessionGate extends StatefulWidget {
     super.key,
     required this.controller,
     required this.scopeFor,
+    this.onboarding,
   });
   final SessionController controller;
   final AppScope Function(String userId) scopeFor;
+
+  /// Primeiro uso; sobrevive à troca de usuário (é do aparelho, não da conta).
+  final OnboardingController? onboarding;
 
   @override
   State<SessionGate> createState() => _SessionGateState();
@@ -55,7 +60,11 @@ class _SessionGateState extends State<SessionGate> {
 
   @override
   Widget build(BuildContext context) => switch (widget.controller.state) {
-    SessionActive() => NaLataApp(key: ValueKey(_scope!.userId), scope: _scope!),
+    SessionActive() => NaLataApp(
+      key: ValueKey(_scope!.userId),
+      scope: _scope!,
+      onboarding: widget.onboarding,
+    ),
     SessionInitializing() => const _BootstrapApp(
       child: NaLoading(label: 'Preparando sua sessão…'),
     ),

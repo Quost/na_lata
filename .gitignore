@@ -49,3 +49,7 @@ config/classroom.json
 .env
 .env.*
 !.env.example
+
+# Supabase local (QUA01): gerados por tool/local_supabase.dart
+config/local.json
+config/local.android.json

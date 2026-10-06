@@ -38,6 +38,8 @@ A identidade anônima persiste no aparelho. Reinstalar/limpar armazenamento cria
 
 Aplicar SQL, iniciar o app duas vezes em instalações distintas e confirmar dois usuários e dois profiles. Após T02/T08: importar código real, avaliar em A e ler em B; tentar alterar/deletar a avaliação de A usando B (deve afetar zero linhas/ser negado). Testar nota 0/6, 501 caracteres e duplicidade. Executar ainda `supabase/tests/rls_smoke.sql`, `supabase/tests/lists_rls.sql` e `supabase/tests/profiles_rls.sql` no SQL Editor; o script usa transação e desfaz todos os dados criados.
 
+Para testar permissões sem tocar no projeto da turma, use o Supabase local com contas A/B: [LOCAL.md](LOCAL.md).
+
 Sem projeto configurado, somente o modo demo pode ser validado. Não confundir erro de permissão com uma lista vazia e não substituir banco por fake silenciosamente.
 
 Fontes: [Flutter](https://supabase.com/docs/guides/getting-started/quickstarts/flutter), [sessões anônimas](https://supabase.com/docs/guides/auth/auth-anonymous), [chaves](https://supabase.com/docs/guides/api/api-keys).
