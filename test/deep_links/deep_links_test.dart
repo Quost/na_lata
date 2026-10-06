@@ -8,6 +8,7 @@ import 'package:na_lata/core/models.dart';
 import 'package:na_lata/data/clients/app_failure.dart';
 import 'package:na_lata/data/clients/backend_client.dart';
 import 'package:na_lata/data/demo_repositories.dart';
+import 'package:na_lata/data/profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _profileId = '11111111-1111-4111-8111-111111111111';
@@ -164,7 +165,7 @@ void main() {
           addTearDown(sdk.dispose);
           final source = RepositoryDeepLinkContentSource(
             products: DemoProducts(),
-            backend: BackendClient(sdk),
+            profiles: SupabaseProfileRepository(BackendClient(sdk)),
           );
 
           expect(

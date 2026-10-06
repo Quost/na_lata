@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import '../../data/clients/app_failure.dart';
-import '../../data/clients/backend_client.dart';
 import '../../data/list_repository.dart';
+import '../../data/profile_repository.dart';
 import '../../core/contracts.dart';
 import '../../core/models.dart';
 import '../../features/lists/list_models.dart';
@@ -143,29 +143,22 @@ class RepositoryDeepLinkContentSource implements DeepLinkContentSource {
   const RepositoryDeepLinkContentSource({
     required this.products,
     this.lists,
-    this.backend,
+    this.profiles,
   });
 
   final ProductRepository products;
   final ListRepository? lists;
-  final BackendClient? backend;
+  final ProfileRepository? profiles;
 
   @override
   Future<Product?> product(String barcode) => products.byBarcode(barcode);
 
   @override
   Future<SharedProfile?> profile(String id) async {
-    final client = backend;
-    if (client == null) return null;
-    final row = await client.request<Map<String, dynamic>?>(
-      (db) =>
-          db.from('profiles').select('id,nickname').eq('id', id).maybeSingle(),
-    );
-    if (row == null) return null;
-    return SharedProfile(
-      id: row['id'] as String,
-      nickname: row['nickname'] as String,
-    );
+    final profile = await profiles?.byId(id);
+    return profile == null
+        ? null
+        : SharedProfile(id: profile.id, nickname: profile.nickname);
   }
 
   @override
