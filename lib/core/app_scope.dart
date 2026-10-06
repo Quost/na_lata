@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../data/demo_repositories.dart' show DemoBrands;
 import 'contracts.dart';
 import 'models.dart';
+import 'notification_contracts.dart';
 
 class AppScope extends ChangeNotifier {
   AppScope({
@@ -11,20 +11,24 @@ class AppScope extends ChangeNotifier {
     required this.openFoodFacts,
     required this.isDemo,
     required this.userId,
-    BrandRepository? brands,
-  }) : brands = brands ?? DemoBrands(products);
+    this.notificationPreferences,
+  });
+
   final ProductRepository products;
   final ReviewRepository reviews;
   final CommunityRepository community;
   final OpenFoodFactsRepository openFoodFacts;
 
-  /// Sem injeção explícita, as marcas são derivadas de [products].
-  final BrandRepository brands;
   final bool isDemo;
   final String userId;
+
+  final NotificationPreferencesRepository? notificationPreferences;
+
   ProductQuery query = const ProductQuery();
   final Set<String> comparison = {};
+
   void refresh() => notifyListeners();
+
   void setQuery(ProductQuery value) {
     query = value;
     notifyListeners();
@@ -37,6 +41,7 @@ class FeatureContext {
     required this.openProduct,
     this.product,
   });
+
   final AppScope scope;
   final Product? product;
   final void Function(Product) openProduct;
