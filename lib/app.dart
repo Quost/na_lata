@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'core/app_scope.dart';
 import 'core/models.dart';
 import 'feature_registry.dart';
+import 'features/catalog/catalog_no_results.dart';
 import 'features/appearance/theme_controller.dart';
 import 'features/history/history_feature.dart' show recordVisit;
 import 'design_system/na_lata_ui.dart';
@@ -179,13 +180,7 @@ class _CatalogTab extends StatelessWidget {
             return const NaLoading(label: 'Carregando produtos…');
           }
           if (snapshot.data!.isEmpty) {
-            return const NaEmpty(
-              icon: Icons.inventory_2_outlined,
-              title: 'Nenhum produto encontrado',
-              message:
-                  'Tente outro nome, limpe os filtros ou toque em '
-                  'Adicionar para trazer um produto novo.',
-            );
+            return CatalogNoResults(scope: scope);
           }
           return Column(
             children: [
