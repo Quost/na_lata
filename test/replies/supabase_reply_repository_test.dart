@@ -77,7 +77,7 @@ Map<String, dynamic> replyRow(String id, {String body = 'Concordo!'}) => {
 };
 
 void main() {
-   test('page filtra pela review e ordena por created_at e id', () async {
+  test('page filtra pela review e ordena por created_at e id', () async {
     final repo = await repository((request) async {
       expect(request.url.path, '/rest/v1/review_replies');
       expect(request.url.queryParameters['review_id'], 'eq.v1');
