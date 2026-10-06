@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'components.dart';
+import 'filter_summary.dart';
 import 'tokens.dart';
 
 /// Vitrine dos componentes visuais compartilhados. Não é uma tela do usuário
@@ -15,6 +16,12 @@ class DesignSystemGallery extends StatefulWidget {
 class _DesignSystemGalleryState extends State<DesignSystemGallery> {
   static const _sabores = ['Leite', 'Chocolate'];
   final Set<String> _filtros = {'Leite'};
+  static const _ativosIniciais = [
+    NaFilterItem(id: 'text', dimension: 'Nome', value: '“leite”'),
+    NaFilterItem(id: 'brand', dimension: 'Marca', value: 'Fazenda Aurora'),
+    NaFilterItem(id: 'minRating', dimension: 'Nota mínima', value: '4 ou mais'),
+  ];
+  List<NaFilterItem> _ativos = _ativosIniciais;
   int _salvos = 0;
   bool _cardSalvo = false;
   bool _comFalha = true;
@@ -169,6 +176,27 @@ class _DesignSystemGalleryState extends State<DesignSystemGallery> {
                 ),
               ],
             ),
+          ),
+          NaSection(
+            title: 'Filtros ativos',
+            description:
+                'Chips removíveis com contagem e ação Limpar. Cada remover '
+                'tem tooltip e rótulo para leitor de tela.',
+            child: _ativos.isEmpty
+                ? OutlinedButton(
+                    onPressed: () => setState(() => _ativos = _ativosIniciais),
+                    child: const Text('Restaurar exemplo'),
+                  )
+                : NaFilterSummary(
+                    items: _ativos,
+                    onRemove: (id) => setState(
+                      () => _ativos = [
+                        for (final item in _ativos)
+                          if (item.id != id) item,
+                      ],
+                    ),
+                    onClear: () => setState(() => _ativos = const []),
+                  ),
           ),
           NaSection(
             title: 'Estados',

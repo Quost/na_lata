@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/models.dart';
 import '../../design_system/na_lata_ui.dart';
+import 'catalog_filter_summary.dart';
 
 /// T05 · Pesquisar catálogo por nome.
 class CatalogFeature extends StatefulWidget {
@@ -59,9 +60,14 @@ class _CatalogFeatureState extends State<CatalogFeature> {
     _submit();
   }
 
+  void _removeFilter(String id) => _scope.setQuery(
+    removeProductFilter(_scope.query, CatalogFilterKind.fromId(id)),
+  );
+
+  void _clearFilters() => _scope.setQuery(const ProductQuery());
+
   @override
   Widget build(BuildContext buildContext) {
-    final theme = Theme.of(buildContext);
     return Padding(
       padding: const EdgeInsets.only(bottom: NaSpace.lg),
       child: Column(
@@ -107,17 +113,14 @@ class _CatalogFeatureState extends State<CatalogFeature> {
           ListenableBuilder(
             listenable: _scope,
             builder: (context, _) {
-              final q = _scope.query;
-              if (q.text.isEmpty && q.brand == null && q.category == null) {
-                return const SizedBox.shrink();
-              }
+              final items = productFilterItems(_scope.query);
+              if (items.isEmpty) return const SizedBox.shrink();
               return Padding(
                 padding: const EdgeInsets.only(top: NaSpace.sm),
-                child: Text(
-                  _summary(q),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: NaColors.muted,
-                  ),
+                child: NaFilterSummary(
+                  items: items,
+                  onRemove: _removeFilter,
+                  onClear: _clearFilters,
                 ),
               );
             },
@@ -125,14 +128,5 @@ class _CatalogFeatureState extends State<CatalogFeature> {
         ],
       ),
     );
-  }
-
-  String _summary(ProductQuery q) {
-    final parts = <String>[
-      if (q.text.isNotEmpty) 'nome “${q.text}”',
-      if (q.brand != null) 'marca ${q.brand}',
-      if (q.category != null) 'categoria ${q.category}',
-    ];
-    return 'Filtrando por ${parts.join(' • ')}';
   }
 }

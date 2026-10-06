@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:na_lata/app.dart';
 import 'package:na_lata/core/app_scope.dart';
 import 'package:na_lata/data/demo_repositories.dart';
+import 'package:na_lata/features/auth/session_controller.dart';
+import 'package:na_lata/features/auth/session_gate.dart';
+import 'auth/fake_auth.dart';
 import 'package:na_lata/data/open_food_facts_repository.dart';
 import 'package:na_lata/features/onboarding/onboarding_controller.dart';
 import 'package:na_lata/features/onboarding/onboarding_page.dart';
@@ -180,6 +183,42 @@ void main() {
       expect(find.text('Leite integral'), findsOneWidget);
       expect(find.byTooltip('Ajuda: rever a apresentação'), findsNothing);
     });
+  });
+
+  group('integração com a sessão', () {
+    testWidgets(
+      'SessionGate mostra o onboarding no primeiro uso e abre a home ao pular',
+      (tester) async {
+        final c = await _controller();
+        final auth = FakeAuthRepository();
+        final session = SessionController(auth);
+        addTearDown(() {
+          session.dispose();
+          return auth.close();
+        });
+        await session.start();
+        await tester.pumpWidget(
+          SessionGate(
+            controller: session,
+            onboarding: c,
+            scopeFor: (userId) => AppScope(
+              products: DemoProducts(),
+              reviews: DemoReviews(),
+              community: DemoCommunity(),
+              openFoodFacts: HttpOpenFoodFactsRepository(),
+              isDemo: true,
+              userId: userId,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Bem-vindo ao Na Lata'), findsOneWidget);
+
+        await _tapText(tester, 'Pular');
+        await tester.pumpAndSettle();
+        expect(find.text('Leite integral'), findsOneWidget);
+      },
+    );
   });
 
   group('OnboardingPage', () {

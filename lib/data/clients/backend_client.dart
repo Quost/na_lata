@@ -22,6 +22,11 @@ class BackendClient {
     return id;
   }
 
+  /// Usuário e eventos de auth para o AuthRepository. Tokens continuam
+  /// guardados pelo SDK; o app não os lê nem persiste.
+  User? get currentUser => _supabase.auth.currentUser;
+  Stream<AuthState> get authChanges => _supabase.auth.onAuthStateChange;
+
   /// Não repete escritas: timeout não garante que o servidor cancelou a operação.
   /// A UI deve reconciliar o estado antes de reenviar uma gravação.
   Future<T> request<T>(Future<T> Function(SupabaseClient db) action) async {
@@ -41,6 +46,11 @@ class BackendClient {
       throw const AppFailure(
         FailureKind.network,
         'Não foi possível conectar. Verifique sua internet.',
+      );
+    } on AuthRetryableFetchException {
+      throw const AppFailure(
+        FailureKind.network,
+        'Sem conexão. Verifique sua internet.',
       );
     } on AuthException catch (error) {
       if (error.code == 'anonymous_provider_disabled') {
