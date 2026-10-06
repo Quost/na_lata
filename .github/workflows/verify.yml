@@ -64,9 +64,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # O gate abaixo busca a branch-base; precisa do token de leitura
-          # disponibilizado para este job pelo permission `contents: read`.
-          persist-credentials: true
+          persist-credentials: false
       - name: Só builda se android/pubspec mudou
         id: gate
         run: |
