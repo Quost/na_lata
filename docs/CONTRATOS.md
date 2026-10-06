@@ -8,6 +8,8 @@ Cada módulo recebe `FeatureContext`: `scope` com repositórios e usuário atual
 
 `APP_MODE=demo` usa repositórios em memória; `APP_MODE=supabase` usa sessão anônima e banco real. `FeaturePending` identifica uma entrega ainda não implementada. O modo real inicia, mas exibirá pendências até T02/T08 serem entregues. O fake permite construir as interfaces antes disso.
 
+A sessão é controlada por `SessionController` (`lib/features/auth/`) a partir do `AuthRepository` (`lib/data/auth_repository.dart`), com os estados inicializando, visitante, conta e erro. O `SessionGate` cria um `AppScope` por `userId`: trocar de usuário recria escopo, navegação e listeners; refresh de token não reconstrói nada. Sessão expirada ou saída mostram recuperação explícita e nunca criam visitante automaticamente. Tokens ficam só no SDK do Supabase; não persistir senha/token em SharedPreferences ou logs.
+
 ## Modelos e banco
 
 | Dart | SQL | Regra |
@@ -17,14 +19,19 @@ Cada módulo recebe `FeatureContext`: `scope` com repositórios e usuário atual
 | Product.brand | products.brand_key | Primeira marca da lista OFF, trim + minúsculas; null se ausente |
 | Product.category | products.category | Primeiro categories_tags informado; null se ausente |
 | Product.imageUrl | products.image_url | Pode ser null; UI trata erro de imagem |
+| Product.source | products.source | `open_food_facts` ou null; null = origem não informada (produtos antigos, sem data retroativa) |
+| Product.sourceUrl | products.source_url | HTTPS em host openfoodfacts.org; a UI só exibe se passar em `safeSourceUri` |
+| Product.sourceFetchedAt | products.source_fetched_at | Momento da consulta ao OFF, em UTC; null se desconhecido |
 | Review.userId | reviews.user_id | ID de auth, nunca apelido |
 | Review.nickname | profiles.nickname | Obter por relação profiles, não duplicar em reviews |
 | Review.rating | reviews.rating | Inteiro 1–5 |
 | Review.comment | reviews.comment | Até 500 caracteres, opcional |
+| PublicProfile.nickname | profiles.nickname | 2–40 caracteres após trim |
+| PublicProfile.bio | profiles.bio | Opcional, até 160 caracteres; null quando vazia |
 
 Categorias reais são os identificadores fornecidos pelo OFF; o protótipo não resolve taxonomia/tradução completa. Produtos fictícios usam categorias legíveis e códigos `demo-*`; não devem ser importados no banco real.
 
-`reviews` tem unicidade `(barcode,user_id)`. Usar upsert com essas colunas; não enviar `id`, `created_at` ou `updated_at` no update. `profiles` nasce por trigger do auth. Favoritos e denúncias têm unicidade por usuário e alvo.
+`reviews` tem unicidade `(barcode,user_id)`. Usar upsert com essas colunas; não enviar `id`, `created_at` ou `updated_at` no update. `profiles` nasce por trigger do auth. O perfil público (PER01) é lido e editado por `ProfileRepository` em `lib/data/profile_repository.dart`: pedir sempre `publicProfileColumns` (id, nickname, bio), nunca `select(*)`. A tabela tem leitura e edição por coluna; campo novo em `profiles` precisa de grant próprio na migração e só entra em `PublicProfile` se for público. Preferências privadas ficam em outro modelo. Favoritos e denúncias têm unicidade por usuário e alvo.
 
 T08 implementa leitura/gravação e T17 depois implementa exclusão no mesmo repositório. T18/T19/T22/T23 editam métodos distintos em `supabase_community.dart`: sincronizar antes de começar e resolver conflitos preservando os métodos dos colegas. As tasks correspondentes também completam o fake para permitir demonstração sem rede.
 
@@ -38,7 +45,7 @@ T15 implementa `moderateComment`; T09 chama esse helper ao exibir comentário. A
 
 ## Recursos locais e integração tardia
 
-T24 exporta `Future<void> recordVisit(Product product)` usando SharedPreferences. Após seu merge, o professor conecta uma chamada nos dois callbacks de abertura de produto de `app.dart`. Não registrar visitas em build.
+T24 exporta `Future<void> recordVisit(Product product, {required String userId})` usando SharedPreferences, com histórico separado por conta (`AppScope.userId`), limite de 50 e último acesso por produto. `app.dart` chama o helper nos dois callbacks de abertura de produto; nunca registrar visitas em build.
 
 T03 e T04 consultam `scope.products.byBarcode`, depois `scope.openFoodFacts.lookup`, importam e chamam `openProduct`. Na demonstração, scanner usa códigos reais e rede; catálogo fictício não simula uma resposta OFF. Para desenvolver sem rede, injetar fake de OFF em teste.
 
