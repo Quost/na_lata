@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'app.dart';
 import 'core/app_scope.dart';
 import 'core/app_config.dart';
+import 'data/auth_repository.dart';
 import 'data/demo_repositories.dart';
 import 'data/open_food_facts_repository.dart';
 import 'data/brand_repository.dart';
@@ -10,15 +11,23 @@ import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
 import 'data/clients/backend_client.dart';
+import 'data/cache/cached_product_repository.dart';
 import 'features/appearance/theme_controller.dart';
+import 'features/auth/session_controller.dart';
+import 'features/auth/session_gate.dart';
+import 'features/onboarding/onboarding_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await themeController.load();
+  final onboarding = OnboardingController();
+  await onboarding.load();
   try {
     final config = AppConfig.fromEnvironment();
     config.validate();
     final demo = config.isDemo;
+    final prefs = await SharedPreferences.getInstance();
     BackendClient? client;
     if (!demo) {
       await Supabase.initialize(
@@ -26,22 +35,34 @@ Future<void> main() async {
         publishableKey: config.key,
         postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
       );
-      final sdk = Supabase.instance.client;
-      client = BackendClient(sdk);
-      if (sdk.auth.currentSession == null) {
-        await client.request((db) => db.auth.signInAnonymously());
-      }
+      client = BackendClient(Supabase.instance.client);
     }
+    final products = CachedProductRepository(
+      demo ? DemoProducts() : SupabaseProducts(client!),
+      prefs,
+    );
+    final reviews = demo ? DemoReviews() : SupabaseReviews(client!);
+    final community = demo ? DemoCommunity() : SupabaseCommunity(client!);
+    final brands = demo ? null : SupabaseBrands(client!);
+    final openFoodFacts = HttpOpenFoodFactsRepository();
+    // A sessão (anônima ou conta) é controlada pelo SessionController; o
+    // escopo é recriado a cada troca de usuário.
+    final session = SessionController(
+      demo ? DemoAuthRepository() : SupabaseAuthRepository(client!),
+    );
+    unawaited(session.start());
     runApp(
-      NaLataApp(
-        scope: AppScope(
-          products: demo ? DemoProducts() : SupabaseProducts(client!),
-          reviews: demo ? DemoReviews() : SupabaseReviews(client!),
-          community: demo ? DemoCommunity() : SupabaseCommunity(client!),
-          brands: demo ? null : SupabaseBrands(client!),
-          openFoodFacts: HttpOpenFoodFactsRepository(),
+      SessionGate(
+        controller: session,
+        onboarding: onboarding,
+        scopeFor: (userId) => AppScope(
+          products: products,
+          reviews: reviews,
+          community: community,
+          brands: brands,
+          openFoodFacts: openFoodFacts,
           isDemo: demo,
-          userId: demo ? 'demo-user' : client!.requireUserId,
+          userId: userId,
         ),
       ),
     );
