@@ -30,21 +30,25 @@ for f in supabase/migrations/*.sql; do
   fi
 done
 
-# Uma migration só pode ser renomeada, sem alterar o conteúdo, para resolver uma
-# colisão de versão ou corrigir um nome fora do padrão. Renomear uma versão única e
-# válida esconderia uma migration já aplicada e continua proibido.
+duplicate_versions=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
+  | sed 's#.*/##; s/_.*//' | sort | uniq -d)
+if [[ -n "$duplicate_versions" ]]; then
+  err "Versões de migration duplicadas: $duplicate_versions"
+fi
+
+# Uma migration só pode ser renomeada para resolver uma colisão de versão ou
+# para corrigir um nome legado inválido. Renomear uma versão única válida
+# esconderia uma migration já aplicada e continua proibido.
 while IFS=$'\t' read -r status old_path new_path; do
   [[ -z "$status" ]] && continue
-  old_name=$(basename "$old_path")
-  old_version=${old_name%%_*}
+  old_version=$(basename "$old_path" | cut -d_ -f1)
   new_version=$(basename "$new_path" | cut -d_ -f1)
+  old_name=$(basename "$old_path")
   base_count=$(git ls-tree -r --name-only "origin/${GITHUB_BASE_REF:-main}" -- supabase/migrations \
     | awk -v version="$old_version" 'BEGIN { n=0 } $0 ~ "/" version "_" { n++ } END { print n }')
-  invalid_name=false
-  [[ "$old_name" =~ ^[0-9]{12,14}_[a-z0-9_]+\.sql$ ]] || invalid_name=true
-  if [[ "$status" != "R100" ]]; then
-    err "Migration renomeada com conteúdo alterado: $old_path -> $new_path"
-  elif [[ "$old_version" == "$new_version" ]] || { [[ "$base_count" -lt 2 ]] && ! $invalid_name; }; then
+  legacy_invalid_name=false
+  [[ "$old_name" =~ ^[0-9]{12,14}_[a-z0-9_]+\.sql$ ]] || legacy_invalid_name=true
+  if [[ "$old_version" == "$new_version" || ( "$base_count" -lt 2 && "$legacy_invalid_name" != true ) ]]; then
     err "Migration existente renomeada sem resolver colisão de versão: $old_path -> $new_path"
   fi
 done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations)
