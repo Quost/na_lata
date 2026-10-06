@@ -61,6 +61,11 @@ class SupabaseProducts implements ProductRepository {
   }
 
   Product _fromRow(Map<String, dynamic> row) => Product(
+    source: row['source'] as String?,
+    sourceUrl: row['source_url'] as String?,
+    sourceFetchedAt: DateTime.tryParse(
+      row['source_fetched_at'] as String? ?? '',
+    ),
     barcode: row['barcode'] as String,
     name: row['name'] as String,
     brand: row['brand_key'] as String?,

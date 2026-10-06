@@ -1,0 +1,45 @@
+name: Release
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  tag:
+    name: Cria tag do commit integrado
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configura identidade do tagger
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - id: version
+        name: Calcula a próxima versão
+        run: |
+          current=$(grep -E '^version: ' pubspec.yaml | sed 's/version: //; s/+.*//')
+          IFS=. read -r major minor patch <<< "$current"
+          latest=$(git tag -l 'v[0-9]*' --sort=-v:refname | head -1)
+          if [ -n "$latest" ]; then
+            previous=${latest#v}; previous=${previous%%+*}
+            IFS=. read -r old_major old_minor old_patch <<< "$previous"
+            if [ "$old_major.$old_minor.$old_patch" = "$current" ]; then patch=$((patch + 1)); fi
+          fi
+          echo "tag=v$major.$minor.$patch+${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+      - name: Cria tag imutável do commit da main
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git tag -a "$TAG" "$GITHUB_SHA" -m "Release $TAG"
+          git push origin "$TAG"
+      - name: Dispara deploy da tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh workflow run deploy.yml --ref "$TAG"
