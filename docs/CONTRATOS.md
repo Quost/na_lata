@@ -33,6 +33,8 @@ Categorias reais são os identificadores fornecidos pelo OFF; o protótipo não 
 
 T08 implementa leitura/gravação e T17 depois implementa exclusão no mesmo repositório. T18/T19/T22/T23 editam métodos distintos em `supabase_community.dart`: sincronizar antes de começar e resolver conflitos preservando os métodos dos colegas. As tasks correspondentes também completam o fake para permitir demonstração sem rede.
 
+A ficha de um produto já importado só muda por `ProductRefreshRepository.apply(CatalogUpdate)` (CAT02), que chama a função `refresh_product`. Ela grava apenas nome, marca, categoria e foto; campo ausente na fonte mantém o valor atual. A consulta ao OFF parte de um toque na ficha, mostra antes/depois e só é gravada após confirmação; o banco aceita uma atualização por hora por produto. Campo novo de catálogo deve entrar em `CatalogUpdate` e na função, não em um UPDATE direto.
+
 ## Busca e notas
 
 Busca por nome consulta **catálogo importado**. Busca externa, somente por barcode, usa OFF v2. Catálogo e reviews são pequenos nesta aula; buscar listas e agregar no cliente é aceitável. O limite padrão de retorno do Supabase não é uma solução de paginação para produção.

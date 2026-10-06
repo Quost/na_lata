@@ -1,7 +1,7 @@
 # Supabase — preparação do professor
 
 1. Criar projeto exclusivo para a aula no Supabase. Não reutilizar banco de produção.
-2. Abrir SQL Editor e executar `supabase/migrations/202609280001_classroom.sql` **uma vez**. A migração é transacional e não apaga tabelas existentes. Em seguida, aplique as migrações posteriores em ordem de data (ex.: `202610050001_product_lists.sql`, listas de produtos; `202610050002_public_profile.sql`, bio e leitura de perfil por coluna).
+2. Abrir SQL Editor e executar `supabase/migrations/202609280001_classroom.sql` **uma vez**. A migração é transacional e não apaga tabelas existentes. Em seguida, aplique as migrações posteriores em ordem de data (ex.: `202610050001_product_lists.sql`, listas de produtos; `202610050002_public_profile.sql`, bio e leitura de perfil por coluna; `202610050003_refresh_product.sql`, atualização da ficha pela fonte, que depende de `202610050001_product_source.sql`).
 3. Em Authentication → Sign In / Providers, habilitar **Anonymous Sign-Ins**. Os caminhos do painel podem variar.
 4. Copiar a URL e a chave pública `sb_publishable_...`. O launcher desta turma exige esse formato; chaves legadas JWT não são aceitas. **Nunca usar service_role ou secret no app.**
 5. Preparar configuração local:
@@ -26,6 +26,7 @@ A identidade anônima persiste no aparelho. Reinstalar/limpar armazenamento cria
 
 - Usuário autenticado (inclusive anônimo): ler catálogo, perfis/apelidos, avaliações e relatos.
 - Importar produto novo sem editar cadastro de outros.
+- Atualizar a ficha pela fonte só pela função `refresh_product`: grava nome, marca, categoria e foto, uma vez por hora por produto. Não há UPDATE direto em `products`.
 - Criar, editar e excluir suas próprias avaliações.
 - Ler/escrever seus próprios favoritos e denúncias.
 - Listas de produtos: dono lê/edita/exclui; lista pública é legível por qualquer usuário autenticado. Criar lista ou adicionar item exige conta confirmada (não anônima).
@@ -36,7 +37,7 @@ A identidade anônima persiste no aparelho. Reinstalar/limpar armazenamento cria
 
 ## Validar depois de configurar
 
-Aplicar SQL, iniciar o app duas vezes em instalações distintas e confirmar dois usuários e dois profiles. Após T02/T08: importar código real, avaliar em A e ler em B; tentar alterar/deletar a avaliação de A usando B (deve afetar zero linhas/ser negado). Testar nota 0/6, 501 caracteres e duplicidade. Executar ainda `supabase/tests/rls_smoke.sql`, `supabase/tests/lists_rls.sql` e `supabase/tests/profiles_rls.sql` no SQL Editor; o script usa transação e desfaz todos os dados criados.
+Aplicar SQL, iniciar o app duas vezes em instalações distintas e confirmar dois usuários e dois profiles. Após T02/T08: importar código real, avaliar em A e ler em B; tentar alterar/deletar a avaliação de A usando B (deve afetar zero linhas/ser negado). Testar nota 0/6, 501 caracteres e duplicidade. Executar ainda `supabase/tests/rls_smoke.sql`, `supabase/tests/lists_rls.sql`, `supabase/tests/profiles_rls.sql` e `supabase/tests/product_refresh.sql` no SQL Editor; o script usa transação e desfaz todos os dados criados.
 
 Sem projeto configurado, somente o modo demo pode ser validado. Não confundir erro de permissão com uma lista vazia e não substituir banco por fake silenciosamente.
 

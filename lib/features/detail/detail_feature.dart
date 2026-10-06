@@ -5,27 +5,54 @@ import '../../core/models.dart';
 import '../../core/product_source.dart';
 import '../../core/ui_format.dart';
 import '../../design_system/na_lata_ui.dart';
+import 'product_refresh_panel.dart';
 
 /// T06 — Ficha completa do produto.
 ///
 /// Exibe nome, marca, categoria e imagem do [Product] recebido via
 /// [FeatureContext.product]. Quando o produto é nulo (abertura pela Oficina),
 /// mostra orientação para abrir pelo catálogo.
-class DetailFeature extends StatelessWidget {
+class DetailFeature extends StatefulWidget {
   const DetailFeature({super.key, required this.context});
   final FeatureContext context;
 
   @override
+  State<DetailFeature> createState() => _DetailFeatureState();
+}
+
+class _DetailFeatureState extends State<DetailFeature> {
+  /// Ficha relida depois de atualizar pela fonte (CAT02).
+  Product? _refreshed;
+
+  @override
   Widget build(BuildContext buildContext) {
-    final product = context.product;
-    if (product == null) {
+    final opened = widget.context.product;
+    if (opened == null) {
       return const NaEmpty(
         title: 'Nenhum produto selecionado',
         message: 'Abra um produto pelo catálogo para ver a ficha.',
         icon: Icons.info_outline,
       );
     }
-    return _ProductCard(product: product);
+    final refreshed = _refreshed;
+    final product = refreshed != null && refreshed.barcode == opened.barcode
+        ? refreshed
+        : opened;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ProductCard(product: product),
+        ProductRefreshPanel(
+          scope: widget.context.scope,
+          product: product,
+          onUpdated: (updated) {
+            setState(() => _refreshed = updated);
+            // Catálogo e demais telas releem o produto.
+            widget.context.scope.refresh();
+          },
+        ),
+      ],
+    );
   }
 }
 

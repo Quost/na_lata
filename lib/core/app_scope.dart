@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/demo_repositories.dart' show DemoBrands;
+import '../data/product_refresh_repository.dart';
 import 'contracts.dart';
 import 'models.dart';
 
@@ -12,6 +13,7 @@ class AppScope extends ChangeNotifier {
     required this.isDemo,
     required this.userId,
     BrandRepository? brands,
+    this.productRefresh,
   }) : brands = brands ?? DemoBrands(products);
   final ProductRepository products;
   final ReviewRepository reviews;
@@ -20,6 +22,9 @@ class AppScope extends ChangeNotifier {
 
   /// Sem injeção explícita, as marcas são derivadas de [products].
   final BrandRepository brands;
+
+  /// Atualização da ficha pela fonte (CAT02); null deixa a ação indisponível.
+  final ProductRefreshRepository? productRefresh;
   final bool isDemo;
   final String userId;
   ProductQuery query = const ProductQuery();

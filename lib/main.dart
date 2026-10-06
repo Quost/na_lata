@@ -3,9 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/app_scope.dart';
 import 'core/app_config.dart';
+import 'core/contracts.dart';
 import 'data/demo_repositories.dart';
 import 'data/open_food_facts_repository.dart';
 import 'data/brand_repository.dart';
+import 'data/product_refresh_repository.dart';
 import 'data/supabase_products.dart';
 import 'data/supabase_reviews.dart';
 import 'data/supabase_community.dart';
@@ -32,10 +34,21 @@ Future<void> main() async {
         await client.request((db) => db.auth.signInAnonymously());
       }
     }
+    final ProductRepository products;
+    final ProductRefreshRepository productRefresh;
+    if (demo) {
+      final memory = DemoProducts();
+      products = memory;
+      productRefresh = DemoProductRefresh(memory);
+    } else {
+      products = SupabaseProducts(client!);
+      productRefresh = SupabaseProductRefresh(client, products);
+    }
     runApp(
       NaLataApp(
         scope: AppScope(
-          products: demo ? DemoProducts() : SupabaseProducts(client!),
+          products: products,
+          productRefresh: productRefresh,
           reviews: demo ? DemoReviews() : SupabaseReviews(client!),
           community: demo ? DemoCommunity() : SupabaseCommunity(client!),
           brands: demo ? null : SupabaseBrands(client!),
