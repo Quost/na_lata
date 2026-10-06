@@ -1,10 +1,13 @@
 import '../core/catalog_query.dart';
 import '../core/contracts.dart';
 import '../core/models.dart';
+import '../core/product_source.dart';
+import '../features/detail/product_refresh.dart';
 import '../features/report/report_logic.dart';
 import 'brand_repository.dart';
 import '../features/sightings/sighting_logic.dart';
 import 'clients/app_failure.dart';
+import 'product_refresh_repository.dart';
 import 'supabase_reviews.dart' show validateReviewDraft;
 
 const demoProducts = [
@@ -73,6 +76,45 @@ class DemoProducts implements ProductRepository {
   @override
   Future<void> importProduct(Product product) async {
     if (!_items.any((p) => p.barcode == product.barcode)) _items.add(product);
+  }
+}
+
+/// CAT02 em memória, com as mesmas regras de `public.refresh_product`: só
+/// campos de catálogo mudam e cada produto aceita uma atualização por
+/// [productRefreshInterval].
+class DemoProductRefresh implements ProductRefreshRepository {
+  DemoProductRefresh(this.products, {DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
+  final DemoProducts products;
+  final DateTime Function() _clock;
+  final Map<String, DateTime> _refreshedAt = {};
+
+  @override
+  Future<Product> apply(CatalogUpdate update) async {
+    final valid = validateCatalogUpdate(update);
+    final index = products._items.indexWhere((p) => p.barcode == valid.barcode);
+    if (index < 0) {
+      throw const AppFailure(FailureKind.unavailable, productGoneMessage);
+    }
+    final current = products._items[index];
+    if (catalogChanges(current, valid).isEmpty) return current;
+    final now = _clock();
+    final last = _refreshedAt[valid.barcode];
+    if (last != null && now.difference(last) < productRefreshInterval) {
+      throw refreshRateLimited(productRefreshInterval - now.difference(last));
+    }
+    _refreshedAt[valid.barcode] = now;
+    return products._items[index] = Product(
+      barcode: current.barcode,
+      name: valid.name,
+      brand: valid.brand,
+      category: valid.category,
+      imageUrl: valid.imageUrl,
+      isDemo: current.isDemo,
+      source: ProductSource.openFoodFacts,
+      sourceUrl: openFoodFactsProductUrl(current.barcode),
+      sourceFetchedAt: now.toUtc(),
+    );
   }
 }
 
