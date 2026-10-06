@@ -1,0 +1,5 @@
+project_id = "na_lata"
+
+[db]
+port = 54322
+major_version = 15

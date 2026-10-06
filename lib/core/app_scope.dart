@@ -13,17 +13,22 @@ class AppScope extends ChangeNotifier {
     required this.userId,
     this.notificationPreferences,
   });
+
   final ProductRepository products;
   final ReviewRepository reviews;
   final CommunityRepository community;
   final OpenFoodFactsRepository openFoodFacts;
+
   final bool isDemo;
   final String userId;
 
   final NotificationPreferencesRepository? notificationPreferences;
+
   ProductQuery query = const ProductQuery();
   final Set<String> comparison = {};
+
   void refresh() => notifyListeners();
+
   void setQuery(ProductQuery value) {
     query = value;
     notifyListeners();
@@ -36,6 +41,7 @@ class FeatureContext {
     required this.openProduct,
     this.product,
   });
+
   final AppScope scope;
   final Product? product;
   final void Function(Product) openProduct;
