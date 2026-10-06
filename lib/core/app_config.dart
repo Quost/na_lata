@@ -13,8 +13,13 @@ class AppConfig {
     key: values['SUPABASE_PUBLISHABLE_KEY'] as String? ?? '',
   );
 
+  /// Supabase local (QUA01): a própria máquina ou o host dela visto pelo
+  /// emulador Android (10.0.2.2). Somente esses hosts aceitam HTTP.
+  static const localHosts = {'127.0.0.1', 'localhost', '10.0.2.2'};
+
   final String mode, url, key;
   bool get isDemo => mode == 'demo';
+  bool get isLocal => localHosts.contains(Uri.tryParse(url)?.host);
 
   void validate() {
     if (mode != 'demo' && mode != 'supabase') {
@@ -23,7 +28,7 @@ class AppConfig {
     if (isDemo) return;
     final uri = Uri.tryParse(url);
     if (uri == null ||
-        uri.scheme != 'https' ||
+        !(uri.scheme == 'https' || (uri.scheme == 'http' && isLocal)) ||
         uri.host.isEmpty ||
         uri.userInfo.isNotEmpty ||
         uri.hasQuery ||

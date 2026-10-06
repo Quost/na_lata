@@ -35,6 +35,7 @@ Use `Theme.of(context).textTheme`: headlineMedium para título de tela, titleLar
 - `NaItemCard(title:, subtitle:, onTap:, leading:)`: item navegável.
 - `NaRatingBadge(average:, count:)`: apresentação de nota já calculada; null/zero mostra “Sem avaliações”.
 - `NaLoading`, `NaEmpty`, `NaError`: estados padronizados.
+- `NaFilterSummary(items:, onRemove:, onClear:)`: contagem, chips removíveis e ação Limpar para os filtros ativos. Recebe `NaFilterItem(id:, dimension:, value:)` e devolve o `id` removido; não conhece a consulta. Cada remover tem tooltip e rótulo para leitor de tela, e os chips quebram linha em 320 px/200%.
 - `TextFormField`, `FilterChip`, `OutlinedButton`, `SnackBar`: Material com tema compartilhado.
 
 ```dart

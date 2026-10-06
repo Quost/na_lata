@@ -19,14 +19,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - run: bash scripts/guard.sh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
       - name: Gitleaks
         run: |
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz | tar xz gitleaks
           ./gitleaks detect --redact --no-banner --log-opts="origin/${{ github.base_ref }}..HEAD"
-      - name: Migrations já aplicadas não podem ser editadas
+      - name: Migrations já aplicadas não podem ser editadas ou removidas
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          changed=$(git diff --diff-filter=MDR --name-only "origin/${{ github.base_ref }}"...HEAD -- supabase/migrations)
+          changed=$(git diff --diff-filter=MD --name-only "$BASE_SHA"...HEAD -- supabase/migrations)
           if [ -n "$changed" ]; then echo "::error::Migrations existentes não podem ser alteradas/removidas; crie uma nova:"; echo "$changed"; exit 1; fi
       - name: PR referencia issue
         env:
