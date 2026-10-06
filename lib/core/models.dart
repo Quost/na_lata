@@ -9,6 +9,7 @@ class Product {
     this.source,
     this.sourceUrl,
     this.sourceFetchedAt,
+    this.cachedAt,
   });
   final String barcode;
   final String name;
@@ -24,6 +25,9 @@ class Product {
 
   /// Momento em que a fonte foi consultada; null quando desconhecido.
   final DateTime? sourceFetchedAt;
+
+  /// Momento em que a ficha foi gravada no cache offline; null se for live.
+  final DateTime? cachedAt;
 }
 
 class Review {
