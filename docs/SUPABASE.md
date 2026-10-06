@@ -1,7 +1,7 @@
 # Supabase — preparação do professor
 
 1. Criar projeto exclusivo para a aula no Supabase. Não reutilizar banco de produção.
-2. Abrir SQL Editor e executar `supabase/migrations/202609280001_classroom.sql` **uma vez**. A migração é transacional e não apaga tabelas existentes. Em seguida, aplique as migrações posteriores em ordem de data (ex.: `202610050001_product_lists.sql`, listas de produtos; `202610050002_public_profile.sql`, bio e leitura de perfil por coluna).
+2. Abrir SQL Editor e executar `supabase/migrations/202609280001_classroom.sql` **uma vez**. A migração é transacional e não apaga tabelas existentes. Em seguida, aplique as migrações posteriores em ordem de data (ex.: `202610050001_product_lists.sql`, listas de produtos; `202610050004_public_profile.sql`, bio e leitura de perfil por coluna).
 3. Em Authentication → Sign In / Providers, habilitar **Anonymous Sign-Ins**. Os caminhos do painel podem variar.
 4. Copiar a URL e a chave pública `sb_publishable_...`. O launcher desta turma exige esse formato; chaves legadas JWT não são aceitas. **Nunca usar service_role ou secret no app.**
 5. Preparar configuração local:

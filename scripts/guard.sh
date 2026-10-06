@@ -29,6 +29,14 @@ for f in supabase/migrations/*.sql; do
     err "$f cria tabela sem habilitar RLS."
   fi
 done
+duplicates=$(
+  for f in supabase/migrations/*.sql; do
+    basename "$f" | cut -d_ -f1
+  done | sort | uniq -d
+)
+if [[ -n "$duplicates" ]]; then
+  err "Versões de migrations duplicadas: $(echo "$duplicates" | tr '\n' ' ')"
+fi
 # 5. Skips de teste
 if grep -rnE "skip:\s*true|@Skip|\bfocus\b.*test" test 2>/dev/null; then
   err "Testes ignorados não são permitidos."
