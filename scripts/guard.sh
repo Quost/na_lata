@@ -29,6 +29,20 @@ for f in supabase/migrations/*.sql; do
     err "$f cria tabela sem habilitar RLS."
   fi
 done
+
+# Uma migration só pode ser renomeada para resolver uma colisão de versão.
+# Renomear uma versão única esconderia uma migration já aplicada e continua proibido.
+while IFS=$'\t' read -r old_path new_path; do
+  [[ -z "$old_path" ]] && continue
+  old_version=$(basename "$old_path" | cut -d_ -f1)
+  new_version=$(basename "$new_path" | cut -d_ -f1)
+  base_count=$(git ls-tree -r --name-only "origin/${GITHUB_BASE_REF:-main}" -- supabase/migrations \
+    | awk -v version="$old_version" 'BEGIN { n=0 } $0 ~ "/" version "_" { n++ } END { print n }')
+  if [[ "$old_version" == "$new_version" || "$base_count" -lt 2 ]]; then
+    err "Migration existente renomeada sem resolver colisão de versão: $old_path -> $new_path"
+  fi
+done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations | cut -f1,2)
+
 # 5. Skips de teste
 if grep -rnE "skip:\s*true|@Skip|\bfocus\b.*test" test 2>/dev/null; then
   err "Testes ignorados não são permitidos."
