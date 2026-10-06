@@ -25,6 +25,7 @@ import 'features/sightings/sightings_feature.dart';
 import 'features/nickname/nickname_feature.dart';
 import 'features/history/history_feature.dart';
 import 'features/appearance/appearance_feature.dart';
+import 'features/auth/save_account_feature.dart';
 
 typedef FeatureBuilder = Widget Function(FeatureContext);
 final List<(String, String, FeatureBuilder)> features = [
@@ -145,4 +146,9 @@ final List<(String, String, FeatureBuilder)> features = [
     (FeatureContext c) => HistoryFeature(context: c),
   ),
   ('T26', 'Aparência', (FeatureContext c) => AppearanceFeature(context: c)),
+  (
+    'AUT02',
+    'Salvar minha conta',
+    (FeatureContext c) => SaveAccountFeature(context: c),
+  ),
 ];

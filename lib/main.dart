@@ -47,9 +47,8 @@ Future<void> main() async {
     final openFoodFacts = HttpOpenFoodFactsRepository();
     // A sessão (anônima ou conta) é controlada pelo SessionController; o
     // escopo é recriado a cada troca de usuário.
-    final session = SessionController(
-      demo ? DemoAuthRepository() : SupabaseAuthRepository(client!),
-    );
+    final auth = demo ? DemoAuthRepository() : SupabaseAuthRepository(client!);
+    final session = SessionController(auth);
     unawaited(session.start());
     runApp(
       SessionGate(
@@ -60,6 +59,7 @@ Future<void> main() async {
           reviews: reviews,
           community: community,
           brands: brands,
+          auth: auth,
           openFoodFacts: openFoodFacts,
           isDemo: demo,
           userId: userId,
