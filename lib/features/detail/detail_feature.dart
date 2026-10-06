@@ -231,6 +231,35 @@ class ProductSourceInfo extends StatelessWidget {
               ],
             ),
           ],
+          if (product.cachedAt != null) ...[
+            const SizedBox(height: NaSpace.md),
+            Container(
+              padding: const EdgeInsets.all(NaSpace.sm),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(NaSpace.sm),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.offline_bolt_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: NaSpace.sm),
+                  Expanded(
+                    child: Text(
+                      'Dados salvos offline em ${formatShortDate(product.cachedAt!)}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
