@@ -1,5 +1,60 @@
+# Supabase LOCAL da aula (QUA01). Usado só por `supabase start/db reset` na
+# própria máquina; não vincula nem altera o projeto remoto da turma.
+# Opções omitidas usam o padrão do Supabase CLI. Referência:
+# https://supabase.com/docs/guides/local-development/cli/config
 project_id = "na_lata"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [db]
 port = 54322
+shadow_port = 54320
 major_version = 15
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = true
+# Ordem alfabética: cada feature acrescenta seu arquivo NNN_feature.sql.
+sql_paths = ["./seeds/*.sql"]
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+# Serviços que o app não usa ficam desligados para subir mais rápido.
+[realtime]
+enabled = false
+
+[storage]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+
+[local_smtp]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+# O app entra como anônimo, igual ao projeto da turma.
+enable_anonymous_sign_ins = true
+
+[auth.email]
+enable_signup = true
+# Contas A/B do seed já nascem confirmadas; cadastros locais não exigem email.
+enable_confirmations = false
