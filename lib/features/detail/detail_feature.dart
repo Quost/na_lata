@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/app_scope.dart';
 import '../../core/models.dart';
+import '../../core/product_source.dart';
+import '../../core/ui_format.dart';
 import '../../design_system/na_lata_ui.dart';
 import 'link_opener.dart';
 import 'product_quality.dart';
@@ -325,4 +328,92 @@ class _InfoRow extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Crédito da fonte dos dados, data da consulta e link de origem.
+///
+/// Produto sem [Product.source] mostra "Origem não informada", sem data nem
+/// link. O link só aparece se for HTTPS de host permitido e é oferecido como
+/// texto selecionável com botão de copiar (o app não abre links externos).
+class ProductSourceInfo extends StatelessWidget {
+  const ProductSourceInfo({super.key, required this.product});
+  final Product product;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isOff = product.source == ProductSource.openFoodFacts;
+    final fetchedAt = product.sourceFetchedAt;
+    final link = safeSourceUri(product.sourceUrl);
+    final credit = isOff
+        ? 'Dados do Open Food Facts, licença ODbL.'
+        : 'Origem não informada';
+    return Semantics(
+      container: true,
+      label: 'Origem dos dados',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(),
+          _InfoRow(icon: Icons.source_outlined, label: 'Fonte', value: credit),
+          if (fetchedAt != null) ...[
+            const SizedBox(height: NaSpace.sm),
+            _InfoRow(
+              icon: Icons.event_outlined,
+              label: 'Consultado em',
+              value: formatShortDate(fetchedAt),
+            ),
+          ],
+          if (link != null) ...[
+            const SizedBox(height: NaSpace.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: SelectableText(
+                    link.toString(),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Copiar link da fonte',
+                  icon: const Icon(Icons.copy_outlined),
+                  onPressed: () =>
+                      Clipboard.setData(ClipboardData(text: link.toString())),
+                ),
+              ],
+            ),
+          ],
+          if (product.cachedAt != null) ...[
+            const SizedBox(height: NaSpace.md),
+            Container(
+              padding: const EdgeInsets.all(NaSpace.sm),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(NaSpace.sm),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.offline_bolt_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: NaSpace.sm),
+                  Expanded(
+                    child: Text(
+                      'Dados salvos offline em ${formatShortDate(product.cachedAt!)}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

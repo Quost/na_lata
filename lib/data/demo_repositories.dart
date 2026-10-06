@@ -1,6 +1,8 @@
+import '../core/catalog_query.dart';
 import '../core/contracts.dart';
 import '../core/models.dart';
 import '../features/report/report_logic.dart';
+import 'brand_repository.dart';
 import '../features/sightings/sighting_logic.dart';
 import 'clients/app_failure.dart';
 import 'supabase_reviews.dart' show validateReviewDraft;
@@ -71,6 +73,130 @@ class DemoProducts implements ProductRepository {
   @override
   Future<void> importProduct(Product product) async {
     if (!_items.any((p) => p.barcode == product.barcode)) _items.add(product);
+  }
+}
+
+/// Diretório de marcas em memória, derivado de um [ProductRepository].
+class DemoBrands implements BrandRepository {
+  DemoBrands(this.products);
+  final ProductRepository products;
+
+  @override
+  Future<BrandPage> search(String text, {String? after, int limit = 20}) async {
+    checkBrandPageLimit(limit);
+    final query = brandSearchKey(text);
+    final barcodes = <String, Set<String>>{};
+    for (final p in await products.search(const ProductQuery())) {
+      final key = p.brand?.trim() ?? '';
+      if (key.isEmpty || !brandSearchKey(key).contains(query)) continue;
+      barcodes.putIfAbsent(key, () => {}).add(p.barcode);
+    }
+    final keys =
+        barcodes.keys
+            .where((k) => after == null || k.compareTo(after) > 0)
+            .toList()
+          ..sort();
+    return brandPageOf([
+      for (final key in keys.take(limit + 1))
+        Brand(key: key, productCount: barcodes[key]!.length),
+    ], limit);
+  }
+}
+
+/// Catálogo paginado em memória para [CatalogQuery].
+class DemoCatalog implements CatalogRepository {
+  DemoCatalog({
+    List<Product> products = demoProducts,
+    List<Review> reviews = const [],
+    List<CatalogObservation> observations = const [],
+    DateTime Function()? now,
+  }) : _products = [...products],
+       _reviews = [...reviews],
+       _observations = [...observations],
+       _now = now ?? DateTime.now;
+
+  final List<Product> _products;
+  final List<Review> _reviews;
+  final List<CatalogObservation> _observations;
+  final DateTime Function() _now;
+
+  @override
+  Future<PageResult<Product>> page(
+    CatalogQuery query, {
+    CatalogCursor? after,
+    int limit = 20,
+  }) async {
+    if (limit < 1 || limit > 100) {
+      throw const AppFailure(
+        FailureKind.validation,
+        'Tamanho de página deve estar entre 1 e 100.',
+      );
+    }
+    final start = after?.offsetFor(query) ?? 0;
+    final since = query.observedWithinDays == null
+        ? null
+        : _now().subtract(Duration(days: query.observedWithinDays!));
+    final text = query.text?.toLowerCase();
+
+    final matches = <({Product product, double? rating, DateTime? seen})>[];
+    for (final p in _products) {
+      if (text != null && !p.name.toLowerCase().contains(text)) continue;
+      if (query.barcode != null && p.barcode != query.barcode) continue;
+      if (query.brandKey != null &&
+          (p.brand == null || catalogBrandKey(p.brand!) != query.brandKey)) {
+        continue;
+      }
+      if (query.category != null && p.category != query.category) continue;
+      final ratings = [
+        for (final r in _reviews)
+          if (r.barcode == p.barcode) r.rating,
+      ];
+      final rating = ratings.isEmpty
+          ? null
+          : ratings.reduce((a, b) => a + b) / ratings.length;
+      if (query.minRating != null &&
+          (rating == null || rating < query.minRating!)) {
+        continue;
+      }
+      // Região e janela valem para a mesma observação do produto.
+      DateTime? seen;
+      for (final o in _observations) {
+        if (o.barcode != p.barcode ||
+            (query.cityId != null && o.cityId != query.cityId) ||
+            (query.uf != null && o.uf != query.uf) ||
+            (since != null && o.observedAt.isBefore(since))) {
+          continue;
+        }
+        if (seen == null || o.observedAt.isAfter(seen)) seen = o.observedAt;
+      }
+      if (query.filtersObservations && seen == null) continue;
+      matches.add((product: p, rating: rating, seen: seen));
+    }
+
+    int byName(Product a, Product b) {
+      final c = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      return c != 0 ? c : a.barcode.compareTo(b.barcode);
+    }
+
+    int descNullsLast(Comparable? a, Comparable? b) {
+      if (a == null || b == null) return a == b ? 0 : (a == null ? 1 : -1);
+      return b.compareTo(a);
+    }
+
+    matches.sort((a, b) {
+      final c = switch (query.sort) {
+        CatalogSort.name => 0,
+        CatalogSort.rating => descNullsLast(a.rating, b.rating),
+        CatalogSort.recent => descNullsLast(a.seen, b.seen),
+      };
+      return c != 0 ? c : byName(a.product, b.product);
+    });
+
+    final end = start + limit;
+    return PageResult(
+      items: [for (final m in matches.skip(start).take(limit)) m.product],
+      next: end < matches.length ? CatalogCursor.after(query, end) : null,
+    );
   }
 }
 

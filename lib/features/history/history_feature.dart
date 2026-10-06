@@ -25,7 +25,10 @@ class HistoryFeature extends StatefulWidget {
 }
 
 class _HistoryFeatureState extends State<HistoryFeature> {
-  late final HistoryStore _store = widget.store ?? HistoryStore();
+  // Criada a cada uso a partir da sessão atual: se a conta mudar, o histórico
+  // acompanha em vez de ficar preso ao usuário de quando a tela abriu.
+  HistoryStore get _store =>
+      widget.store ?? HistoryStore(userId: widget.context.scope.userId);
   List<HistoryEntry> _entries = const [];
   bool _loading = true;
   bool _clearing = false;
@@ -38,6 +41,14 @@ class _HistoryFeatureState extends State<HistoryFeature> {
     super.initState();
     HistoryStore.changes.addListener(_reload);
     _fetch();
+  }
+
+  @override
+  void didUpdateWidget(HistoryFeature oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.context.scope.userId != widget.context.scope.userId) {
+      _reload();
+    }
   }
 
   @override
@@ -58,7 +69,8 @@ class _HistoryFeatureState extends State<HistoryFeature> {
   Future<void> _fetch() async {
     final loadId = ++_loadId;
     try {
-      final codes = await _store.load();
+      final visits = await _store.load();
+      final codes = [for (final visit in visits) visit.barcode];
       final products = await Future.wait(
         codes.map(widget.context.scope.products.byBarcode),
       );
@@ -86,7 +98,8 @@ class _HistoryFeatureState extends State<HistoryFeature> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Limpar histórico?'),
         content: const Text(
-          'Os produtos vistos neste aparelho serão removidos da lista.',
+          'Os produtos que você viu neste aparelho serão removidos do histórico '
+          'desta conta. Outras contas não são afetadas.',
         ),
         actions: [
           TextButton(
@@ -135,7 +148,7 @@ class _HistoryFeatureState extends State<HistoryFeature> {
     child: NaSection(
       title: 'Vistos recentemente',
       description:
-          'Últimos $historyLimit produtos abertos neste aparelho, do mais recente ao mais antigo.',
+          'Últimos $historyLimit produtos que você abriu neste aparelho, do mais recente ao mais antigo.',
       child: _buildBody(),
     ),
   );

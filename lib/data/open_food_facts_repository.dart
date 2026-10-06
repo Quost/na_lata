@@ -2,6 +2,7 @@ import '../core/contracts.dart';
 import 'clients/app_failure.dart';
 import 'clients/json_api_client.dart';
 import '../core/models.dart';
+import '../core/product_source.dart';
 
 const offProductNameFallback = 'Produto sem nome';
 const offFields =
@@ -14,9 +15,11 @@ final _offBarcode = RegExp(r'^\d{8,14}$');
 bool isOffBarcode(String barcode) => _offBarcode.hasMatch(barcode);
 
 class HttpOpenFoodFactsRepository implements OpenFoodFactsRepository {
-  HttpOpenFoodFactsRepository({JsonApiClient? api})
-    : api = api ?? JsonApiClient();
+  HttpOpenFoodFactsRepository({JsonApiClient? api, DateTime Function()? now})
+    : api = api ?? JsonApiClient(),
+      _now = now ?? DateTime.now;
   final JsonApiClient api;
+  final DateTime Function() _now;
   @override
   Future<Product?> lookup(String barcode) async {
     if (!isOffBarcode(barcode)) {
@@ -32,7 +35,7 @@ class HttpOpenFoodFactsRepository implements OpenFoodFactsRepository {
     );
     // O OFF responde produto inexistente com HTTP 404 e corpo {"status":0}.
     final json = await api.getObject(uri, acceptStatus: const {404});
-    return parseOffProduct(json, barcode);
+    return parseOffProduct(json, barcode, fetchedAt: _now());
   }
 }
 
@@ -40,8 +43,13 @@ class HttpOpenFoodFactsRepository implements OpenFoodFactsRepository {
 ///
 /// status 0 é produto inexistente (null); qualquer outra estrutura inesperada é
 /// resposta inválida. Mantém o [barcode] consultado, pois o OFF pode devolver
-/// `code` normalizado (ex.: UPC de 12 dígitos com zero à esquerda).
-Product? parseOffProduct(Map<String, dynamic> json, String barcode) {
+/// `code` normalizado (ex.: UPC de 12 dígitos com zero à esquerda). [fetchedAt]
+/// é o momento da consulta (UTC no produto); sem ele a data fica desconhecida.
+Product? parseOffProduct(
+  Map<String, dynamic> json,
+  String barcode, {
+  DateTime? fetchedAt,
+}) {
   final status = json['status'];
   if (status == 0) return null;
   final product = json['product'];
