@@ -26,7 +26,8 @@ jobs:
       - name: Migrations já aplicadas não podem ser editadas
         run: |
           git fetch origin "${{ github.base_ref }}" --depth=1
-          changed=$(git diff --diff-filter=MDR --name-only "origin/${{ github.base_ref }}"...HEAD -- supabase/migrations)
+          # Renomeações (só para corrigir colisão ou nome inválido) são validadas pelo scripts/guard.sh.
+          changed=$(git diff --diff-filter=MD --name-only "origin/${{ github.base_ref }}"...HEAD -- supabase/migrations)
           if [ -n "$changed" ]; then echo "::error::Migrations existentes não podem ser alteradas/removidas; crie uma nova:"; echo "$changed"; exit 1; fi
       - name: PR referencia issue
         env:

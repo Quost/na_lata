@@ -30,18 +30,24 @@ for f in supabase/migrations/*.sql; do
   fi
 done
 
-# Uma migration só pode ser renomeada para resolver uma colisão de versão.
-# Renomear uma versão única esconderia uma migration já aplicada e continua proibido.
-while IFS=$'\t' read -r old_path new_path; do
-  [[ -z "$old_path" ]] && continue
-  old_version=$(basename "$old_path" | cut -d_ -f1)
+# Uma migration só pode ser renomeada, sem alterar o conteúdo, para resolver uma
+# colisão de versão ou corrigir um nome fora do padrão. Renomear uma versão única e
+# válida esconderia uma migration já aplicada e continua proibido.
+while IFS=$'\t' read -r status old_path new_path; do
+  [[ -z "$status" ]] && continue
+  old_name=$(basename "$old_path")
+  old_version=${old_name%%_*}
   new_version=$(basename "$new_path" | cut -d_ -f1)
   base_count=$(git ls-tree -r --name-only "origin/${GITHUB_BASE_REF:-main}" -- supabase/migrations \
     | awk -v version="$old_version" 'BEGIN { n=0 } $0 ~ "/" version "_" { n++ } END { print n }')
-  if [[ "$old_version" == "$new_version" || "$base_count" -lt 2 ]]; then
+  invalid_name=false
+  [[ "$old_name" =~ ^[0-9]{12,14}_[a-z0-9_]+\.sql$ ]] || invalid_name=true
+  if [[ "$status" != "R100" ]]; then
+    err "Migration renomeada com conteúdo alterado: $old_path -> $new_path"
+  elif [[ "$old_version" == "$new_version" ]] || { [[ "$base_count" -lt 2 ]] && ! $invalid_name; }; then
     err "Migration existente renomeada sem resolver colisão de versão: $old_path -> $new_path"
   fi
-done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations | cut -f2,3)
+done < <(git diff --diff-filter=R --name-status "origin/${GITHUB_BASE_REF:-main}"...HEAD -- supabase/migrations)
 
 # 5. Skips de teste
 if grep -rnE "skip:\s*true|@Skip|\bfocus\b.*test" test 2>/dev/null; then
