@@ -15,11 +15,14 @@ import 'data/cache/cached_product_repository.dart';
 import 'features/appearance/theme_controller.dart';
 import 'features/auth/session_controller.dart';
 import 'features/auth/session_gate.dart';
+import 'features/onboarding/onboarding_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await themeController.load();
+  final onboarding = OnboardingController();
+  await onboarding.load();
   try {
     final config = AppConfig.fromEnvironment();
     config.validate();
@@ -51,6 +54,7 @@ Future<void> main() async {
     runApp(
       SessionGate(
         controller: session,
+        onboarding: onboarding,
         scopeFor: (userId) => AppScope(
           products: products,
           reviews: reviews,
