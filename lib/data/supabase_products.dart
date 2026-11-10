@@ -36,6 +36,7 @@ class SupabaseProducts implements ProductRepository {
   @override
   Future<void> importProduct(Product product) async {
     if (product.isDemo) return;
+    final size = product.packageSize;
     await client.request<void>(
       (db) async => db
           .from('products')
@@ -46,11 +47,12 @@ class SupabaseProducts implements ProductRepository {
               'brand_key': product.brand?.trim(),
               'category': product.category?.trim(),
               'image_url': product.imageUrl,
-              'source': product.source,
-              'source_url': product.sourceUrl,
-              'source_fetched_at': product.sourceFetchedAt
-                  ?.toUtc()
-                  .toIso8601String(),
+              // Só envia quando conhecido: tamanho ausente não grava nada.
+              if (size != null) ...{
+                'package_quantity': size.quantity,
+                'package_unit': size.unit.symbol,
+                'package_source': size.source.code,
+              },
             },
             onConflict: 'barcode',
             ignoreDuplicates: true,
@@ -69,5 +71,10 @@ class SupabaseProducts implements ProductRepository {
     brand: row['brand_key'] as String?,
     category: row['category'] as String?,
     imageUrl: row['image_url'] as String?,
+    packageSize: PackageSize.fromColumns(
+      quantity: row['package_quantity'],
+      unit: row['package_unit'],
+      source: row['package_source'],
+    ),
   );
 }
