@@ -79,6 +79,9 @@ class SupabaseReviews implements ReviewRepository {
           .from('reviews')
           .select(reviewColumns)
           .eq('barcode', barcode.trim())
+          // Lista pública e estatísticas ignoram avaliações ocultas (MOD01),
+          // inclusive a da própria autora e as vistas pelo moderador.
+          .eq('visibility', 'visible')
           .order('created_at', ascending: false),
     );
     return rows.map(reviewFromRow).toList();
