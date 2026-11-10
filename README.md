@@ -58,3 +58,9 @@ Use o [design system](docs/DESIGN_SYSTEM.md) para manter consistência visual.
 ## Acesso padronizado aos serviços
 
 Todas as chamadas passam pelos clientes compartilhados. Leia [o guia de clientes](docs/CLIENTES.md) antes de implementar as consultas. Repositórios Supabase recebem BackendClient; chamadas usam client.request e a identidade vem de client.requireUserId.
+
+## Licença
+
+[GPL-3.0](LICENSE) © Matheus Quost e contribuidores do Na Lata.
+
+Quem distribuir uma versão modificada deste código precisa publicá-la também sob GPL-3.0, com o código-fonte. O software é fornecido "como está", sem garantia de qualquer tipo (seções 15 e 16 da licença).
